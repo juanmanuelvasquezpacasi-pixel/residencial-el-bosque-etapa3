@@ -31,6 +31,7 @@ import {
   resolveAsesorFromUrl,
   resolveInitialLotIdFromUrl,
   SECTOR_FILTERS,
+  TAUREN_LOGO_URL,
 } from './data/lotes';
 import { usePresentationAudio } from './hooks/usePresentationAudio';
 
@@ -84,6 +85,8 @@ export default function App() {
   );
   const [sectorFilter, setSectorFilter] = useState<'todos' | LotSector>('todos');
   const [selectedLotId, setSelectedLotId] = useState<string>(initialLotId);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState<boolean>(false);
+  const [headerLogoError, setHeaderLogoError] = useState<boolean>(false);
   const [focusRequest, setFocusRequest] = useState<{ seq: number; zoom: boolean }>({
     seq: 0,
     zoom: false,
@@ -227,6 +230,7 @@ export default function App() {
 
     const firstId = GUIDED_TOUR_LOT_IDS[startIdx];
     setSelectedLotId(firstId);
+    setIsMobileSheetOpen(true);
     setFocusRequest((prev) => ({ seq: prev.seq + 1, zoom: true }));
     setIsTourActive(true);
   };
@@ -269,6 +273,7 @@ export default function App() {
       setSectorFilter('todos');
     }
     setSelectedLotId(id);
+    setIsMobileSheetOpen(true);
     setFocusRequest((prev) => ({ seq: prev.seq + 1, zoom: shouldZoom }));
   };
 
@@ -419,16 +424,30 @@ export default function App() {
   return (
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-[#0f3d26]">
       <header className="h-[48px] min-[860px]:h-[60px] shrink-0 bg-[#0f3d26] text-white px-3 min-[860px]:px-5 flex items-center justify-between gap-2 sm:gap-6 border-b-[3px] border-[#facc15] z-30">
-        {/* Zone 1: Compact Single-line Brand Wordmark */}
+        {/* Zone 1: Brand Logo + Inmobiliaria Tauren */}
         <a
           href="#top"
           onClick={(e) => {
             e.preventDefault();
             handleSectorChange('todos');
+            setIsMobileSheetOpen(false);
           }}
-          className="text-[13px] sm:text-base min-[860px]:text-[17px] font-extrabold font-display tracking-tight text-white truncate min-w-0 max-w-[175px] sm:max-w-none whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15] rounded"
+          className="inline-flex items-center gap-2 min-w-0 max-w-[205px] sm:max-w-none whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15] rounded"
         >
-          El Bosque · Tauren
+          {TAUREN_LOGO_URL && !headerLogoError && (
+            <span className="bg-white px-1.5 py-0.5 rounded-md shrink-0 flex items-center justify-center shadow-sm">
+              <img
+                src={TAUREN_LOGO_URL}
+                alt="Logo Inmobiliaria Tauren"
+                referrerPolicy="no-referrer"
+                onError={() => setHeaderLogoError(true)}
+                className="h-6 min-[860px]:h-7 w-auto object-contain"
+              />
+            </span>
+          )}
+          <span className="text-[13px] sm:text-base min-[860px]:text-[17px] font-extrabold font-display tracking-tight text-white truncate">
+            Inmobiliaria Tauren
+          </span>
         </a>
 
         {/* Zone 2: Concise Sector Navigation (Desktop) */}
@@ -626,10 +645,12 @@ export default function App() {
           focusRequest={focusRequest}
           sectorFocusRequest={sectorFocusRequest}
           isTourActive={isTourActive}
+          isMobileSheetOpen={isMobileSheetOpen}
           isCalibrating={isAdminMode && isCalibrating}
           onSelectLot={(id) => handleSelectLot(id, false)}
           onSelectSector={handleSectorChange}
           onToggleTour={handleToggleTour}
+          onOpenMobileSheet={() => setIsMobileSheetOpen(true)}
           onAerialDimensions={handleAerialDimensions}
           onCalibrateLot={handleCalibrateLot}
           onExportJson={handleExportJson}
@@ -647,6 +668,8 @@ export default function App() {
           isAdminMode={isAdminMode}
           estadosCopied={estadosCopied}
           isSyncingSheet={isSyncingSheet}
+          isMobileSheetOpen={isMobileSheetOpen}
+          onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
           onRefreshSheet={() => void syncFromGoogleSheet()}
           onSectorChange={handleSectorChange}
           onSelectLot={(id) => handleSelectLot(id, true)}

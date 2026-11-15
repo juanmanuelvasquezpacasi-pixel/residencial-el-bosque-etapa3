@@ -29,10 +29,12 @@ interface AerialViewportProps {
   focusRequest: { seq: number; zoom: boolean };
   sectorFocusRequest: { seq: number; sector: 'todos' | LotSector };
   isTourActive: boolean;
+  isMobileSheetOpen: boolean;
   isCalibrating: boolean;
   onSelectLot: (id: string) => void;
   onSelectSector: (sector: 'todos' | LotSector) => void;
   onToggleTour: () => void;
+  onOpenMobileSheet: () => void;
   onAerialDimensions: (naturalWidth: number, naturalHeight: number) => void;
   onCalibrateLot: (id: string, ax: number, ay: number) => void;
   onExportJson: () => void;
@@ -49,10 +51,12 @@ export function AerialViewport({
   focusRequest,
   sectorFocusRequest,
   isTourActive,
+  isMobileSheetOpen,
   isCalibrating,
   onSelectLot,
   onSelectSector,
   onToggleTour,
+  onOpenMobileSheet,
   onAerialDimensions,
   onCalibrateLot,
   onExportJson,
@@ -124,12 +128,12 @@ export function AerialViewport({
     const isMobile = vw < 860 || window.innerWidth < 860;
     const containScale = Math.min(MAX_SCALE, Math.min(vw / nw, vh / nh));
     const coverScale = Math.min(MAX_SCALE, Math.max(vw / nw, vh / nh));
-    const nextMin = isMobile ? coverScale : containScale;
+    const nextMin = isMobile && isMobileSheetOpen ? coverScale : containScale;
 
     let rawX = (vw - nw * nextMin) / 2;
     let rawY = (vh - nh * nextMin) / 2;
 
-    if (isMobile && lotesRef.current.length > 0) {
+    if (isMobile && isMobileSheetOpen && lotesRef.current.length > 0) {
       let sumAx = 0;
       let sumAy = 0;
       for (const l of lotesRef.current) {
@@ -147,7 +151,7 @@ export function AerialViewport({
     setMinScale(nextMin);
     setSmooth(true);
     setTransform({ x, y, scale: nextMin });
-  }, [clampTransform]);
+  }, [clampTransform, isMobileSheetOpen]);
 
   const focusOnLot = useCallback(
     (lot: Lote, allowZoom = false) => {
@@ -262,6 +266,12 @@ export function AerialViewport({
   }, [sectorFocusRequest, imgSize, focusOnSector]);
 
   useEffect(() => {
+    if (!imgSize) return;
+    const t = window.setTimeout(() => fitImage(), 60);
+    return () => window.clearTimeout(t);
+  }, [isMobileSheetOpen, imgSize, fitImage]);
+
+  useEffect(() => {
     const vp = viewportRef.current;
     const handleResize = () => {
       fitImage();
@@ -319,7 +329,7 @@ export function AerialViewport({
 
     vp.addEventListener('wheel', onWheel, { passive: false });
     return () => vp.removeEventListener('wheel', onWheel);
-  }, [clampTransform]);
+  }, [clampTransform, isMobileSheetOpen]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[data-toolbar="true"]')) return;
@@ -512,7 +522,7 @@ export function AerialViewport({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUpOrCancel}
       onPointerCancel={handlePointerUpOrCancel}
-      className={`relative w-full h-[calc(46%+14px)] min-[860px]:h-full min-[860px]:flex-1 shrink-0 overflow-hidden bg-[#0f3d26] select-none touch-none ${cursorClass}`}
+      className={`relative w-full ${isMobileSheetOpen ? 'h-[calc(46%+14px)] landscape:h-full' : 'h-full'} min-[860px]:h-full min-[860px]:flex-1 shrink-0 overflow-hidden bg-[#0f3d26] select-none touch-none transition-[height] duration-300 ${cursorClass}`}
       aria-label="Vista aérea interactiva 2D de Residencial El Bosque Etapa 3"
     >
       {!imgSize && !imgError && (
@@ -656,14 +666,14 @@ export function AerialViewport({
                   transform: 'translate(-50%, -50%)',
                 }}
                 className={`absolute rounded-full bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15] ${
-                  isSelected ? 'pointer-events-none' : ''
+                  isSelected && isMobileSheetOpen ? 'pointer-events-none' : ''
                 }`}
               />
             );
           })}
 
-        {/* Clean hollow highlight ring around the selected red circle (never covers the red number) */}
-        {imgSize && (
+        {/* Clean hollow highlight ring around the selected red circle (shown once user taps a lot or on desktop) */}
+        {imgSize && (isMobileSheetOpen || (typeof window !== 'undefined' && window.innerWidth >= 860)) && (
           <div
             style={{
               left: `${selectedLot.ax}%`,
@@ -777,6 +787,16 @@ export function AerialViewport({
               </>
             )}
           </button>
+
+          {!isMobileSheetOpen && (
+            <button
+              type="button"
+              onClick={onOpenMobileSheet}
+              className="min-[860px]:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-white/35 bg-[#0f3d26]/85 backdrop-blur-[10px] text-white text-[11px] font-bold shadow-xl cursor-pointer whitespace-nowrap"
+            >
+              <span>Toca un lote o Ver lista</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

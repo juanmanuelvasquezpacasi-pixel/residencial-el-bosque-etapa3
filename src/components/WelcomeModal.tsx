@@ -30,13 +30,15 @@ export function WelcomeModal({
         {/* Brand Logo or Architectural Golden/White Emblem */}
         <div className="flex flex-col items-center gap-3">
           {showImageLogo ? (
-            <img
-              src={TAUREN_LOGO_URL}
-              alt="Inmobiliaria Tauren - Residencial El Bosque"
-              referrerPolicy="no-referrer"
-              onError={() => setLogoError(true)}
-              className="max-h-20 w-auto object-contain"
-            />
+            <div className="bg-white/95 px-4 py-2.5 rounded-2xl border border-[#facc15]/80 shadow-lg flex items-center justify-center">
+              <img
+                src={TAUREN_LOGO_URL}
+                alt="Inmobiliaria Tauren SAC - Construimos tu futuro"
+                referrerPolicy="no-referrer"
+                onError={() => setLogoError(true)}
+                className="max-h-16 sm:max-h-20 w-auto object-contain"
+              />
+            </div>
           ) : (
             <div className="w-20 h-20 rounded-2xl border border-[#facc15]/70 bg-white/[0.06] flex items-center justify-center shadow-lg">
               <svg

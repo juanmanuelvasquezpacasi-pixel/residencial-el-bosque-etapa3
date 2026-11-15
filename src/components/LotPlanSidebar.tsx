@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Star,
   Trees,
+  X,
 } from 'lucide-react';
 import {
   Asesor,
@@ -36,6 +37,8 @@ interface LotPlanSidebarProps {
   isAdminMode: boolean;
   estadosCopied: boolean;
   isSyncingSheet: boolean;
+  isMobileSheetOpen: boolean;
+  onCloseMobileSheet: () => void;
   onRefreshSheet: () => void;
   onSectorChange: (sector: 'todos' | LotSector) => void;
   onSelectLot: (id: string) => void;
@@ -86,6 +89,8 @@ export function LotPlanSidebar({
   isAdminMode,
   estadosCopied,
   isSyncingSheet,
+  isMobileSheetOpen,
+  onCloseMobileSheet,
   onRefreshSheet,
   onSectorChange,
   onSelectLot,
@@ -176,17 +181,21 @@ export function LotPlanSidebar({
 
   return (
     <aside
-      className="w-full h-[54%] -mt-3.5 min-[860px]:mt-0 min-[860px]:h-full min-[860px]:w-[420px] bg-white rounded-t-[20px] min-[860px]:rounded-none shadow-[0_-10px_28px_rgba(15,61,38,0.24)] min-[860px]:shadow-none border-t border-[#facc15]/60 min-[860px]:border-t-0 min-[860px]:border-l min-[860px]:border-[#0f3d26]/20 flex flex-col z-30 overflow-hidden shrink-0"
+      className={`${
+        isMobileSheetOpen
+          ? 'flex fixed inset-x-0 bottom-0 h-[56dvh] landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:w-[360px] landscape:h-full min-[860px]:static min-[860px]:h-full min-[860px]:w-[420px]'
+          : 'hidden min-[860px]:flex min-[860px]:h-full min-[860px]:w-[420px]'
+      } bg-white rounded-t-[20px] landscape:rounded-none min-[860px]:rounded-none shadow-[0_-10px_28px_rgba(15,61,38,0.32)] min-[860px]:shadow-none border-t border-[#facc15]/60 min-[860px]:border-t-0 min-[860px]:border-l min-[860px]:border-[#0f3d26]/20 flex-col z-35 overflow-hidden shrink-0`}
       aria-label="Tarjeta de ficha de lotes y plano oficial"
     >
-      {/* Mobile Bottom Sheet Handle + Top Tab Switcher (Ficha y Lotes | Plano Oficial) */}
-      <div className="min-[860px]:hidden shrink-0 px-3 pt-1 pb-1.5 bg-white border-b border-[#0f3d26]/12">
-        <div className="w-9 h-1 rounded-full bg-[#0f3d26]/20 mx-auto mb-1" aria-hidden="true" />
-        <div
-          role="tablist"
-          aria-label="Secciones de la tarjeta inferior"
-          className="grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-[#0f3d26]/[0.06]"
-        >
+      {/* Mobile Bottom Sheet Handle + Top Tab Switcher (Ficha y Lotes | Plano Oficial) + Close to full map */}
+      <div className="min-[860px]:hidden shrink-0 px-3 pt-1.5 pb-1.5 bg-white border-b border-[#0f3d26]/12">
+        <div className="flex items-center gap-1.5">
+          <div
+            role="tablist"
+            aria-label="Secciones de la tarjeta inferior"
+            className="flex-1 grid grid-cols-2 gap-1 p-0.5 rounded-xl bg-[#0f3d26]/[0.06]"
+          >
           <button
             type="button"
             role="tab"
@@ -214,6 +223,16 @@ export function LotPlanSidebar({
           >
             <MapIcon className="w-3.5 h-3.5 shrink-0" />
             <span>Plano Oficial</span>
+          </button>
+          </div>
+          <button
+            type="button"
+            onClick={onCloseMobileSheet}
+            title="Cerrar ficha y ver mapa completo"
+            aria-label="Cerrar ficha y ver mapa completo"
+            className="w-8 h-8 rounded-xl bg-[#0f3d26]/10 hover:bg-[#0f3d26]/20 text-[#0f3d26] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>

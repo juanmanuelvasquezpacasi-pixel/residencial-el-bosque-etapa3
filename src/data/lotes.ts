@@ -30,7 +30,7 @@ export const AERIAL_MAP_URL = 'https://files.catbox.moe/ef0u68.jpg';
 export const PLAN_MAP_URL = 'https://files.catbox.moe/hwg12k.jpg';
 export const PRESENTATION_AUDIO_URL = 'https://files.catbox.moe/1dxlm2.mp3';
 // Reemplaza esta cadena vacía con la URL directa de tu logo cuando lo tengas alojado
-export const TAUREN_LOGO_URL = '';
+export const TAUREN_LOGO_URL = 'https://files.catbox.moe/rz4mpm.png';
 export const GOOGLE_MAPS_URL =
   'https://www.google.com/maps/search/?api=1&query=Av.+Sesquicentenario,+Andahuaylas,+Apurimac,+Peru';
 export const AERIAL_HIT_RADIUS_PX = 25;
@@ -71,7 +71,7 @@ export const SECTOR_FILTERS: Array<{
   mobileLabel: string;
 }> = [
   { value: 'todos', label: 'Todos los lotes (01 - 46)', shortLabel: 'Todos (46)', mobileLabel: 'Todos' },
-  { value: 'Bloque Este', label: 'Lotes 01 - 06 (237.35 m²)', shortLabel: 'Bloque Este', mobileLabel: 'Bloque Este 237m²' },
+  { value: 'Bloque Este', label: 'Lotes 01 - 06', shortLabel: 'Bloque Este', mobileLabel: 'Bloque Este' },
   { value: 'Bloque Norte', label: 'Lotes 07 - 16', shortLabel: 'Bloque Norte', mobileLabel: 'Bloque Norte' },
   { value: 'Bloque Sur', label: 'Lotes 18 - 28', shortLabel: 'Bloque Sur', mobileLabel: 'Bloque Sur' },
   { value: 'Isla Central', label: 'Lotes 29 - 46 (Centro)', shortLabel: 'Isla Central', mobileLabel: 'Isla Central' },
