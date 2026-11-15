@@ -641,7 +641,35 @@ export function AerialViewport({
           className="block max-w-none pointer-events-none"
         />
 
-        {/* Transparent 25px-radius click zones directly over each of the 46 red circles (zero extra dots) */}
+        {/* Visual status tags for VENDIDO (red) and RESERVADO (amber) directly over the aerial photo */}
+        {imgSize &&
+          lotes.map((lote) => {
+            if (lote.estado !== 'vendido' && lote.estado !== 'reservado') return null;
+            const isSold = lote.estado === 'vendido';
+            return (
+              <div
+                key={`status-${lote.id}`}
+                style={{
+                  left: `${lote.ax}%`,
+                  top: `${lote.ay}%`,
+                  transform: `translate(-50%, -50%) scale(${1 / transform.scale})`,
+                }}
+                className="absolute pointer-events-none z-15 flex flex-col items-center justify-center"
+              >
+                <span
+                  className={`px-1.5 py-[1px] rounded-[4px] text-[9px] leading-tight font-extrabold uppercase tracking-wider shadow-md border border-white whitespace-nowrap ${
+                    isSold
+                      ? 'bg-red-600/95 text-white shadow-red-950/60'
+                      : 'bg-amber-400/95 text-[#0f3d26] shadow-amber-950/50'
+                  }`}
+                >
+                  {isSold ? 'Vendido' : 'Reservado'}
+                </span>
+              </div>
+            );
+          })}
+
+        {/* Transparent 25px-radius click zones directly over each of the 46 red circles */}
         {imgSize &&
           !isCalibrating &&
           lotes.map((lote) => {
@@ -651,8 +679,8 @@ export function AerialViewport({
               <button
                 key={lote.id}
                 type="button"
-                aria-label={`Lote ${lote.num} - ${lote.area}`}
-                title={`Lote ${lote.num} · ${lote.area}`}
+                aria-label={`Lote ${lote.num} - ${lote.area} (${lote.estado})`}
+                title={`Lote ${lote.num} · ${lote.area} (${lote.estado.toUpperCase()})`}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (dragRef.current.moved) return;
