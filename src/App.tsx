@@ -16,6 +16,7 @@ import { AerialViewport } from './components/AerialViewport';
 import { CompareModal } from './components/CompareModal';
 import { LotPlanSidebar } from './components/LotPlanSidebar';
 import { PlanModal } from './components/PlanModal';
+import { RotatePhoneOverlay } from './components/RotatePhoneOverlay';
 import { WelcomeModal } from './components/WelcomeModal';
 import {
   buildShareLotUrl,
@@ -235,13 +236,40 @@ export default function App() {
     setIsTourActive(true);
   };
 
+  const enterMobileLandscapeMode = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const isMobileDevice = Math.min(window.innerWidth, window.innerHeight) < 860;
+    if (!isMobileDevice) return;
+
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen may be blocked on iOS Safari
+    }
+
+    try {
+      const orientationApi = screen.orientation as ScreenOrientation & {
+        lock?: (orientation: 'landscape' | 'portrait') => Promise<void>;
+      };
+      if (orientationApi && typeof orientationApi.lock === 'function') {
+        await orientationApi.lock('landscape');
+      }
+    } catch {
+      // Orientation lock unsupported (e.g. iOS Safari) -> RotatePhoneOverlay handles guidance
+    }
+  }, []);
+
   const handleEnterWithAudio = () => {
     setShowWelcome(false);
+    void enterMobileLandscapeMode();
     void audio.play(true);
   };
 
   const handleEnterWithoutAudio = () => {
     setShowWelcome(false);
+    void enterMobileLandscapeMode();
     audio.pause();
   };
 
@@ -715,6 +743,8 @@ export default function App() {
           </button>
         </div>
       )}
+
+      <RotatePhoneOverlay enabled={!showWelcome} />
 
       <WelcomeModal
         isOpen={showWelcome}
