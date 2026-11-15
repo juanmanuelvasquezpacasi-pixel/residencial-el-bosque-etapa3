@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Residencial El Bosque - Etapa 3 | Inmobiliaria Tauren</title>
+  <style>
+    :root {
+      --verde-pino: #0f3d26;
+      --verde-pino-oscuro: #082617;
+      --verde-pino-suave: #165436;
+      --verde-lima: #84cc16;
+      --verde-lima-hover: #65a30d;
+      --amarillo: #facc15;
+      --blanco: #ffffff;
+      --gris-claro: #f4f7f5;
+      --texto-oscuro: #11241a;
+      --texto-suave: #4b6356;
+      --disp: #16a34a;
+      --res: #eab308;
+      --vend: #dc2626;
+      --borde: #dce5df;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+
+    body {
+      background: var(--blanco);
+      color: var(--texto-oscuro);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BARRA SUPERIOR */
+    header {
+      height: 60px;
+      background: var(--verde-pino);
+      color: var(--blanco);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--amarillo);
+      z-index: 30;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-badge {
+      background: var(--amarillo);
+      color: var(--verde-pino-oscuro);
+      font-weight: 900;
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+    }
+    .brand h1 { font-size: 16px; font-weight: 800; letter-spacing: 0.2px; }
+    .brand small { display: block; font-size: 11px; color: #bbf7d0; font-weight: 500; }
+
+    .mobile-toggle {
+      display: none;
+      background: var(--verde-lima);
+      color: var(--verde-pino-oscuro);
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* VISOR IZQUIERDO: FOTO AÉREA NÍTIDA 2D */
+    #viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      background: #0b1c13;
+    }
+    #viewport:active { cursor: grabbing; }
+
+    #canvas-container {
+      position: absolute;
+      transform-origin: 0 0;
+      will-change: transform;
+      user-select: none;
+    }
+
+    #mapa-img {
+      display: block;
+      max-width: none;
+      pointer-events: none;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* Marcador de ubicación exacta en la foto aérea */
+    .aerial-pin {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 20;
+    }
+    .aerial-pin span {
+      background: var(--verde-pino);
+      color: var(--amarillo);
+      font-weight: 800;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      border: 2px solid var(--amarillo);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.55);
+      margin-bottom: 5px;
+      white-space: nowrap;
+    }
+    .aerial-pin i {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--verde-lima);
+      border: 3px solid var(--blanco);
+      box-shadow: 0 0 0 4px rgba(15, 61, 38, 0.7);
+      animation: pulse 1.4s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.9); }
+      70% { box-shadow: 0 0 0 16px rgba(132, 204, 22, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(132, 204, 22, 0); }
+    }
+
+    /* Controles de Zoom */
+    .zoom-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 20;
+    }
+    .zoom-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 2px solid var(--amarillo);
+      background: var(--verde-pino);
+      color: var(--blanco);
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .zoom-btn:hover { background: var(--verde-pino-suave); }
+
+    /* PANEL LATERAL DERECHO (Blanco, Verde Pino, Lima y Amarillo) */
+    aside#sidebar {
+      width: 420px;
+      background: var(--blanco);
+      border-left: 2px solid var(--borde);
+      display: flex;
+      flex-direction: column;
+      z-index: 25;
+      overflow-y: auto;
+    }
+
+    .plano-card {
+      padding: 14px 16px;
+      background: var(--gris-claro);
+      border-bottom: 1px solid var(--borde);
+    }
+    .plano-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .plano-header span { font-size: 13px; font-weight: 800; color: var(--verde-pino); }
+    .plano-header a {
+      font-size: 11px;
+      color: var(--verde-pino);
+      background: var(--amarillo);
+      padding: 3px 8px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .plano-interactive-box {
+      position: relative;
+      width: 100%;
+      background: var(--blanco);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid var(--verde-pino);
+      box-shadow: 0 4px 12px rgba(15, 61, 38, 0.08);
+    }
+    .plano-interactive-box img {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+
+    /* Puntos clicables en el plano */
+    .hotspot-dot {
+      position: absolute;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--verde-pino);
+      color: var(--blanco);
+      font-size: 8.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 1.5px solid var(--blanco);
+      transition: transform 0.15s, background 0.15s;
+    }
+    .hotspot-dot:hover {
+      transform: translate(-50%, -50%) scale(1.3);
+      background: var(--verde-lima);
+      color: var(--verde-pino-oscuro);
+      z-index: 5;
+    }
+    .hotspot-dot.active {
+      background: var(--amarillo);
+      color: var(--verde-pino-oscuro);
+      border-color: var(--verde-pino);
+      transform: translate(-50%, -50%) scale(1.42);
+      box-shadow: 0 0 0 4px rgba(132, 204, 22, 0.55);
+      z-index: 6;
+    }
+    .hotspot-dot.reservado { background: #d97706; }
+    .hotspot-dot.vendido { background: #dc2626; }
+
+    /* Selector y Ficha de Reserva */
+    .info-section {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--blanco);
+    }
+
+    .select-row { display: flex; gap: 8px; }
+    select {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--verde-pino);
+      background: var(--blanco);
+      color: var(--verde-pino);
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .ficha-box {
+      background: var(--gris-claro);
+      border: 1.5px solid var(--borde);
+      border-top: 4px solid var(--verde-lima);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .ficha-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .ficha-title { font-size: 20px; font-weight: 900; color: var(--verde-pino); }
+    .ficha-sector { font-size: 12px; color: var(--texto-suave); font-weight: 600; display: block; margin-top: 2px; }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 5px 11px;
+      border-radius: 99px;
+      text-transform: uppercase;
+    }
+    .badge.disponible { background: #dcfce7; color: var(--verde-pino); border: 1px solid var(--verde-lima); }
+    .badge.reservado { background: #fef9c3; color: #854d0e; border: 1px solid var(--amarillo); }
+    .badge.vendido { background: #fee2e2; color: #991b1b; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric-card {
+      background: var(--blanco);
+      padding: 11px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--borde);
+    }
+    .metric-card small { display: block; font-size: 11px; color: var(--texto-suave); font-weight: 600; margin-bottom: 3px; }
+    .metric-card strong { font-size: 16px; color: var(--verde-pino); font-weight: 800; }
+    .metric-card.area { border-left: 4px solid var(--amarillo); }
+
+    .reserve-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: linear-gradient(135deg, var(--verde-pino) 0%, var(--verde-pino-suave) 100%);
+      color: var(--amarillo);
+      border: 2px solid var(--verde-lima);
+      text-decoration: none;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      transition: transform 0.15s, background 0.2s;
+      box-shadow: 0 4px 12px rgba(15, 61, 38, 0.2);
+    }
+    .reserve-btn:hover {
+      background: var(--verde-lima);
+      color: var(--verde-pino-oscuro);
+    }
+    .reserve-btn.disabled {
+      background: #e2e8f0;
+      color: #64748b;
+      border-color: #cbd5e1;
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    @media (max-width: 860px) {
+      .mobile-toggle { display: block; }
+      aside#sidebar {
+        position: absolute;
+        right: 0; top: 0; bottom: 0;
+        width: 100%;
+        max-width: 400px;
+        transition: transform 0.3s ease;
+      }
+      aside#sidebar.closed { transform: translateX(100%); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-badge">INMOBILIARIA TAUREN</span>
+      <div>
+        <h1>Residencial El Bosque — Etapa 3</h1>
+        <small>Preventa Exclusiva • Andahuaylas</small>
+      </div>
+    </div>
+    <button class="mobile-toggle" id="toggleBtn">📐 Ver Lotes</button>
+  </header>
+
+  <div class="workspace">
+    <!-- IZQUIERDA: NUEVA IMAGEN AÉREA DE CATBOX (2D NÍTIDO SIN PIXELADO) -->
+    <div id="viewport">
+      <div id="canvas-container">
+        <img id="mapa-img" src="https://files.catbox.moe/ivtd6s.jpg" alt="Vista aérea lotes numerados Residencial El Bosque" />
+        <div id="aerialPin" class="aerial-pin">
+          <span id="aerialPinText">Lote 01</span>
+          <i></i>
+        </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="zoomIn" title="Acercar">+</button>
+        <button class="zoom-btn" id="zoomOut" title="Alejar">−</button>
+        <button class="zoom-btn" id="zoomReset" title="Centrar vista" style="font-size:15px;">⟲</button>
+      </div>
+    </div>
+
+    <!-- DERECHA: PLANO COMPLETO + FICHA DE RESERVA -->
+    <aside id="sidebar">
+      <div class="plano-card">
+        <div class="plano-header">
+          <span>📐 Plano de Lotización (01 al 46)</span>
+          <a href="https://files.catbox.moe/hwg12k.jpg" target="_blank">🔍 Ampliar plano</a>
+        </div>
+        <div class="plano-interactive-box" id="planoBox">
+          <img id="planoImg" src="https://files.catbox.moe/hwg12k.jpg" alt="Plano de lotización completo" />
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="select-row">
+          <select id="sectorFilter">
+            <option value="todos">Todos los lotes (01 - 46)</option>
+            <option value="Bloque Este">Lotes 01 - 06 (237.35 m²)</option>
+            <option value="Bloque Norte">Lotes 07 - 16</option>
+            <option value="Bloque Sur">Lotes 18 - 28</option>
+            <option value="Isla Central">Lotes 29 - 46 (Centro)</option>
+            <option value="Área Verde">Lote 17 (Área Verde)</option>
+          </select>
+          <select id="loteSelect"></select>
+        </div>
+
+        <div class="ficha-box">
+          <div class="ficha-top">
+            <div>
+              <div class="ficha-title" id="fichaTitle">Lote 01</div>
+              <span class="ficha-sector" id="fichaSector">Bloque Este</span>
+            </div>
+            <span class="badge disponible" id="fichaEstado">Disponible</span>
+          </div>
+
+          <div class="metrics">
+            <div class="metric-card area">
+              <small>Total de Área</small>
+              <strong id="fichaArea">237.35 m²</strong>
+            </div>
+            <div class="metric-card">
+              <small>Estado Comercial</small>
+              <strong id="fichaEstadoText">Disponible</strong>
+            </div>
+          </div>
+
+          <a id="waReserveBtn" href="#" target="_blank" class="reserve-btn">
+            💬 Reservar este lote por WhatsApp
+          </a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. ASESORES (?asesor=nombre)
+    // ==========================================
+    const ASESORES = {
+      default: { nombre: "Inmobiliaria Tauren", whatsapp: "51985825162" },
+      beder:   { nombre: "Beder",               whatsapp: "51985825162" },
+      juan:    { nombre: "Juan Manuel",         whatsapp: "51942244818" }
+    };
+    const params = new URLSearchParams(window.location.search);
+    const asesor = ASESORES[(params.get("asesor") || "default").toLowerCase()] || ASESORES.default;
+
+    // ==========================================
+    // 2. LOS 46 LOTES CALIBRADOS CON TUS CÍRCULOS ROJOS (ivtd6s.jpg)
+    // px, py = posición en el plano derecho | ax, ay = posición exacta sobre cada círculo rojo en la foto aérea
+    // ==========================================
+    const LOTES = [
+      // BLOQUE ESTE (01 al 06 — Columna derecha de abajo hacia arriba)
+      { id: "01", num: "01", sector: "Bloque Este", area: "237.35 m²", estado: "disponible", px: 60.5, py: 18.8, ax: 83.8, ay: 47.0 },
+      { id: "02", num: "02", sector: "Bloque Este", area: "237.35 m²", estado: "disponible", px: 54.6, py: 17.8, ax: 83.0, ay: 41.8 },
+      { id: "03", num: "03", sector: "Bloque Este", area: "237.35 m²", estado: "disponible", px: 48.8, py: 16.8, ax: 82.1, ay: 36.8 },
+      { id: "04", num: "04", sector: "Bloque Este", area: "237.35 m²", estado: "disponible", px: 43.3, py: 15.8, ax: 81.3, ay: 31.8 },
+      { id: "05", num: "05", sector: "Bloque Este", area: "237.35 m²", estado: "disponible", px: 37.8, py: 14.8, ax: 80.5, ay: 27.0 },
+      { id: "06", num: "06", sector: "Bloque Este", area: "237.35 m²", estado: "disponible", px: 32.3, py: 13.8, ax: 79.6, ay: 22.3 },
+
+      // BLOQUE NORTE (07 al 16 — Franja superior de derecha a izquierda)
+      { id: "07", num: "07", sector: "Bloque Norte", area: "99.84 m²",  estado: "disponible", px: 31.3, py: 26.8, ax: 73.7, ay: 26.3 },
+      { id: "08", num: "08", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 30.8, py: 31.4, ax: 69.8, ay: 26.8 },
+      { id: "09", num: "09", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 29.8, py: 35.8, ax: 65.5, ay: 27.5 },
+      { id: "10", num: "10", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 28.0, py: 40.3, ax: 61.1, ay: 28.0 },
+      { id: "11", num: "11", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 25.0, py: 44.5, ax: 56.5, ay: 27.5 },
+      { id: "12", num: "12", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 26.8, py: 49.0, ax: 52.7, ay: 27.0 },
+      { id: "13", num: "13", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 23.5, py: 53.3, ax: 49.3, ay: 26.5 },
+      { id: "14", num: "14", sector: "Bloque Norte", area: "100.79 m²", estado: "disponible", px: 24.5, py: 57.6, ax: 46.2, ay: 27.2 },
+      { id: "15", num: "15", sector: "Bloque Norte", area: "100.96 m²", estado: "disponible", px: 24.5, py: 61.9, ax: 42.3, ay: 27.8 },
+      { id: "16", num: "16", sector: "Bloque Norte", area: "127.65 m²", estado: "disponible", px: 23.0, py: 67.2, ax: 37.0, ay: 28.8 },
+
+      // ÁREA VERDE (Lote 17)
+      { id: "17", num: "17", sector: "Área Verde", area: "1,022.16 m²", estado: "disponible", px: 37.5, py: 84.5, ax: 16.5, ay: 43.8 },
+
+      // BLOQUE SUR (18 al 28 — Fila inferior de izquierda a derecha)
+      { id: "18", num: "18", sector: "Bloque Sur", area: "127.48 m²", estado: "disponible", px: 49.0, py: 78.6, ax: 21.8, ay: 56.5 },
+      { id: "19", num: "19", sector: "Bloque Sur", area: "114.88 m²", estado: "disponible", px: 50.2, py: 74.6, ax: 26.2, ay: 58.3 },
+      { id: "20", num: "20", sector: "Bloque Sur", area: "115.12 m²", estado: "disponible", px: 52.5, py: 70.8, ax: 30.8, ay: 59.8 },
+      { id: "21", num: "21", sector: "Bloque Sur", area: "115.36 m²", estado: "disponible", px: 53.5, py: 66.8, ax: 35.2, ay: 60.5 },
+      { id: "22", num: "22", sector: "Bloque Sur", area: "115.27 m²", estado: "disponible", px: 54.5, py: 62.6, ax: 39.7, ay: 61.2 },
+      { id: "23", num: "23", sector: "Bloque Sur", area: "114.57 m²", estado: "disponible", px: 55.5, py: 58.2, ax: 44.3, ay: 61.8 },
+      { id: "24", num: "24", sector: "Bloque Sur", area: "114.45 m²", estado: "disponible", px: 56.5, py: 53.8, ax: 49.0, ay: 60.5 },
+      { id: "25", num: "25", sector: "Bloque Sur", area: "200.00 m²", estado: "disponible", px: 59.5, py: 47.8, ax: 55.6, ay: 59.8 },
+      { id: "26", num: "26", sector: "Bloque Sur", area: "95.34 m²",  estado: "disponible", px: 60.5, py: 42.2, ax: 62.5, ay: 58.0 },
+      { id: "27", num: "27", sector: "Bloque Sur", area: "142.03 m²", estado: "disponible", px: 63.0, py: 37.5, ax: 68.0, ay: 57.5 },
+      { id: "28", num: "28", sector: "Bloque Sur", area: "161.66 m²", estado: "disponible", px: 64.5, py: 32.0, ax: 75.3, ay: 56.5 },
+
+      // ISLA CENTRAL (29 al 46 — Pares arriba, Impares abajo, de derecha a izquierda)
+      { id: "29", num: "29", sector: "Isla Central", area: "200.00 m²", estado: "disponible", px: 51.8, py: 32.0, ax: 72.1, ay: 45.2 },
+      { id: "30", num: "30", sector: "Isla Central", area: "200.00 m²", estado: "disponible", px: 44.5, py: 30.8, ax: 71.6, ay: 38.2 },
+      { id: "31", num: "31", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 49.8, py: 39.2, ax: 65.2, ay: 46.2 },
+      { id: "32", num: "32", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 42.8, py: 38.0, ax: 64.8, ay: 39.2 },
+      { id: "33", num: "33", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 48.2, py: 43.8, ax: 60.2, ay: 46.8 },
+      { id: "34", num: "34", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 41.0, py: 42.5, ax: 59.8, ay: 39.8 },
+      { id: "35", num: "35", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 46.5, py: 48.2, ax: 55.3, ay: 47.5 },
+      { id: "36", num: "36", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 39.2, py: 47.0, ax: 54.8, ay: 40.2 },
+      { id: "37", num: "37", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 44.8, py: 52.8, ax: 50.3, ay: 47.8 },
+      { id: "38", num: "38", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 37.5, py: 51.5, ax: 49.7, ay: 40.5 },
+      { id: "39", num: "39", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 43.5, py: 57.2, ax: 44.8, ay: 47.8 },
+      { id: "40", num: "40", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 36.2, py: 55.8, ax: 44.3, ay: 40.5 },
+      { id: "41", num: "41", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 42.0, py: 61.8, ax: 39.2, ay: 47.2 },
+      { id: "42", num: "42", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 34.8, py: 60.5, ax: 39.2, ay: 40.2 },
+      { id: "43", num: "43", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 40.5, py: 66.5, ax: 33.6, ay: 46.2 },
+      { id: "44", num: "44", sector: "Isla Central", area: "100.00 m²", estado: "disponible", px: 33.5, py: 65.2, ax: 34.2, ay: 39.5 },
+      { id: "45", num: "45", sector: "Isla Central", area: "90.00 m²",  estado: "disponible", px: 39.2, py: 71.0, ax: 28.2, ay: 45.2 },
+      { id: "46", num: "46", sector: "Isla Central", area: "90.00 m²",  estado: "disponible", px: 32.2, py: 69.8, ax: 29.3, ay: 38.8 }
+    ];
+
+    // ==========================================
+    // 3. VISOR 2D CON ZOOM NÍTIDO Y ARRASTRE SUAVE
+    // ==========================================
+    const viewport = document.getElementById("viewport");
+    const container = document.getElementById("canvas-container");
+    const mapaImg = document.getElementById("mapa-img");
+    const aerialPin = document.getElementById("aerialPin");
+    const aerialPinText = document.getElementById("aerialPinText");
+
+    let scale = 1, minScale = 0.4, maxScale = 3.5;
+    let posX = 0, posY = 0;
+    let isDragging = false, startX = 0, startY = 0;
+
+    function updateTransform(smooth = false) {
+      container.style.transition = smooth
+        ? "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)"
+        : "none";
+      container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+    }
+
+    function fitImage() {
+      if (!mapaImg.naturalWidth) return;
+      const vw = viewport.clientWidth;
+      const vh = viewport.clientHeight;
+      minScale = Math.min(vw / mapaImg.naturalWidth, vh / mapaImg.naturalHeight);
+      scale = Math.max(vw / mapaImg.naturalWidth, vh / mapaImg.naturalHeight);
+      posX = (vw - mapaImg.naturalWidth * scale) / 2;
+      posY = (vh - mapaImg.naturalHeight * scale) / 2;
+      updateTransform(true);
+    }
+
+    mapaImg.onload = fitImage;
+    window.addEventListener("resize", fitImage);
+
+    viewport.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const delta = e.deltaY < 0 ? 1.18 : 0.85;
+      const newScale = Math.min(maxScale, Math.max(minScale, scale * delta));
+      posX = mx - (mx - posX) * (newScale / scale);
+      posY = my - (my - posY) * (newScale / scale);
+      scale = newScale;
+      updateTransform(false);
+    }, { passive: false });
+
+    viewport.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      startX = e.clientX - posX;
+      startY = e.clientY - posY;
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      posX = e.clientX - startX;
+      posY = e.clientY - startY;
+      updateTransform(false);
+    });
+    window.addEventListener("pointerup", () => { isDragging = false; });
+
+    document.getElementById("zoomIn").onclick = () => {
+      const vw = viewport.clientWidth / 2, vh = viewport.clientHeight / 2;
+      const newScale = Math.min(maxScale, scale * 1.3);
+      posX = vw - (vw - posX) * (newScale / scale);
+      posY = vh - (vh - posY) * (newScale / scale);
+      scale = newScale;
+      updateTransform(true);
+    };
+    document.getElementById("zoomOut").onclick = () => {
+      const vw = viewport.clientWidth / 2, vh = viewport.clientHeight / 2;
+      const newScale = Math.max(minScale, scale * 0.75);
+      posX = vw - (vw - posX) * (newScale / scale);
+      posY = vh - (vh - posY) * (newScale / scale);
+      scale = newScale;
+      updateTransform(true);
+    };
+    document.getElementById("zoomReset").onclick = fitImage;
+
+    // ==========================================
+    // 4. SELECCIÓN Y ENFOQUE EXACTO POR LOTE
+    // ==========================================
+    const planoBox = document.getElementById("planoBox");
+    const sectorFilter = document.getElementById("sectorFilter");
+    const loteSelect = document.getElementById("loteSelect");
+
+    function renderHotspots() {
+      planoBox.querySelectorAll(".hotspot-dot").forEach(el => el.remove());
+      const filtro = sectorFilter.value;
+
+      LOTES.forEach(lote => {
+        if (filtro !== "todos" && lote.sector !== filtro) return;
+        const dot = document.createElement("div");
+        dot.className = `hotspot-dot ${lote.estado}`;
+        dot.dataset.id = lote.id;
+        dot.style.left = `${lote.px}%`;
+        dot.style.top = `${lote.py}%`;
+        dot.textContent = lote.num;
+        dot.title = `Lote ${lote.num} — ${lote.area}`;
+        dot.onclick = () => seleccionarLote(lote.id);
+        planoBox.appendChild(dot);
+      });
+    }
+
+    function populateSelect() {
+      const filtro = sectorFilter.value;
+      loteSelect.innerHTML = "";
+      const lista = LOTES.filter(l => filtro === "todos" || l.sector === filtro);
+      lista.forEach(l => {
+        const opt = document.createElement("option");
+        opt.value = l.id;
+        opt.textContent = `Lote ${l.num} (${l.area})`;
+        loteSelect.appendChild(opt);
+      });
+      if (lista.length > 0) seleccionarLote(lista[0].id);
+    }
+
+    function seleccionarLote(id) {
+      const lote = LOTES.find(l => l.id === id);
+      if (!lote) return;
+
+      loteSelect.value = id;
+
+      planoBox.querySelectorAll(".hotspot-dot").forEach(d => {
+        d.classList.toggle("active", d.dataset.id === id);
+      });
+
+      document.getElementById("fichaTitle").textContent = `Lote ${lote.num}`;
+      document.getElementById("fichaSector").textContent = lote.sector;
+      document.getElementById("fichaArea").textContent = lote.area;
+
+      const badge = document.getElementById("fichaEstado");
+      badge.className = `badge ${lote.estado}`;
+      badge.textContent = lote.estado;
+      document.getElementById("fichaEstadoText").textContent =
+        lote.estado.charAt(0).toUpperCase() + lote.estado.slice(1);
+
+      const waBtn = document.getElementById("waReserveBtn");
+      if (lote.estado === "disponible") {
+        waBtn.classList.remove("disabled");
+        waBtn.textContent = `💬 Reservar Lote ${lote.num} (${lote.area})`;
+        const texto = encodeURIComponent(
+          `Hola ${asesor.nombre}, quiero reservar el Lote ${lote.num} (${lote.sector}) con un área total de ${lote.area} en Residencial El Bosque - 3ra Etapa.`
+        );
+        waBtn.href = `https://wa.me/${asesor.whatsapp}?text=${texto}`;
+      } else {
+        waBtn.classList.add("disabled");
+        waBtn.textContent = `Lote ${lote.estado}`;
+        waBtn.href = "#";
+      }
+
+      if (mapaImg.naturalWidth) {
+        aerialPin.style.left = `${lote.ax}%`;
+        aerialPin.style.top = `${lote.ay}%`;
+        aerialPin.style.display = "flex";
+        aerialPinText.textContent = `Lote ${lote.num} • ${lote.area}`;
+
+        const targetX = (lote.ax / 100) * mapaImg.naturalWidth;
+        const targetY = (lote.ay / 100) * mapaImg.naturalHeight;
+        scale = Math.min(maxScale, Math.max(scale, 1.55));
+        posX = viewport.clientWidth / 2 - targetX * scale;
+        posY = viewport.clientHeight / 2 - targetY * scale;
+        updateTransform(true);
+      }
+    }
+
+    sectorFilter.onchange = () => {
+      renderHotspots();
+      populateSelect();
+    };
+    loteSelect.onchange = (e) => seleccionarLote(e.target.value);
+
+    const sidebar = document.getElementById("sidebar");
+    document.getElementById("toggleBtn").onclick = () => {
+      sidebar.classList.toggle("closed");
+    };
+
+    renderHotspots();
+    populateSelect();
+  </script>
+</body>
+</html>

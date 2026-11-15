@@ -1,0 +1,6 @@
+{
+  "name": "Residencial El Bosque - Etapa 3 | Inmobiliaria Tauren",
+  "description": "Visor interactivo de lotización y vista aérea para Residencial El Bosque Etapa 3 en Andahuaylas — Inmobiliaria Tauren.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
