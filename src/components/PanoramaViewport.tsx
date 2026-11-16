@@ -1,20 +1,29 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  CheckCircle2,
+  Clock,
   Copy,
   Download,
   Edit3,
   LocateFixed,
+  Lock,
+  MessageCircle,
   Minus,
   Pause,
   Play,
   Plus,
   RotateCcw,
   RotateCw,
+  Star,
   Trash2,
+  Trees,
   Undo2,
+  X,
 } from 'lucide-react';
 import {
+  Asesor,
+  buildWhatsappUrl,
   GUIDED_TOUR_LOT_IDS,
   Lote,
   LotSector,
@@ -33,9 +42,12 @@ interface PanoramaViewportProps {
   isTourActive: boolean;
   isMobileSheetOpen: boolean;
   isAdminMode: boolean;
+  asesor: Asesor;
+  comparedLotIds: string[];
   onSelectLot: (id: string) => void;
   onSelectSector: (sector: 'todos' | LotSector) => void;
   onToggleTour: () => void;
+  onToggleCompare: (id: string) => void;
   onOpenMobileSheet: () => void;
 }
 
@@ -123,9 +135,12 @@ export function PanoramaViewport({
   isTourActive,
   isMobileSheetOpen,
   isAdminMode,
+  asesor,
+  comparedLotIds,
   onSelectLot,
   onSelectSector,
   onToggleTour,
+  onToggleCompare,
   onOpenMobileSheet,
 }: PanoramaViewportProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -138,6 +153,7 @@ export function PanoramaViewport({
   const [polygons, setPolygons] = useState<Record<string, SphericalPoint[]>>(() =>
     loadSaved360Polygons()
   );
+  const [hoveredLotId, setHoveredLotId] = useState<string | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
   const [editingLotId, setEditingLotId] = useState<string>(selectedLot.id);
   const [draftPoints, setDraftPoints] = useState<SphericalPoint[]>([]);
@@ -155,7 +171,6 @@ export function PanoramaViewport({
     setEditingLotId(selectedLot.id);
   }, [selectedLot.id]);
 
-  // Initialize Pannellum 360° viewer immediately on mount (preloads behind WelcomeModal!)
   useEffect(() => {
     const container = viewerContainerRef.current;
     if (!container) return;
@@ -172,7 +187,6 @@ export function PanoramaViewport({
       }
 
       try {
-        // First try local /rmju0q.JPG if uploaded to public/, otherwise fallback to PANORAMA_360_URL
         const instance = window.pannellum.viewer(viewerContainerRef.current, {
           type: 'equirectangular',
           panorama: PANORAMA_360_URL,
@@ -242,14 +256,13 @@ export function PanoramaViewport({
         try {
           viewerInstanceRef.current.destroy();
         } catch {
-          // Ignore cleanup errors
+          // Ignore
         }
       }
       viewerInstanceRef.current = null;
     };
   }, [isAdminMode]);
 
-  // Focus camera onto selected lot polygon if traced in 360°
   useEffect(() => {
     if (!focusRequest.zoom) return;
     const poly = polygons[selectedLot.id];
@@ -268,7 +281,6 @@ export function PanoramaViewport({
     }
   }, [selectedLot.id, focusRequest, polygons]);
 
-  // Focus camera onto sector center if lots in that sector have 360° polygons
   useEffect(() => {
     if (sectorFocusRequest.seq === 0) return;
     const inst = viewerInstanceRef.current;
@@ -302,7 +314,7 @@ export function PanoramaViewport({
     try {
       localStorage.setItem(STORAGE_360_KEY, JSON.stringify(next));
     } catch {
-      // Ignore storage limits
+      // Ignore
     }
   }, []);
 
@@ -379,7 +391,10 @@ export function PanoramaViewport({
           .join(', ');
         return `  '${id}': [${pts}],`;
       });
-    const snippet = `export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {\n${entries.join('\n')}\n};`;
+    const snippet = `export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {
+${entries.join('
+')}
+};`;
     try {
       await navigator.clipboard.writeText(snippet);
       setCopiedSnippet(true);
@@ -487,7 +502,14 @@ export function PanoramaViewport({
       .filter((p): p is { x: number; y: number } => Boolean(p));
   }, [draftPoints, cameraState]);
 
-  const tourIndex = GUIDED_TOUR_LOT_IDS.indexOf(selectedLot.id);
+  const hoveredLot = useMemo(
+    () => (hoveredLotId ? lotes.find((l) => l.id === hoveredLotId) || null : null),
+    [hoveredLotId, lotes]
+  );
+
+  const isCompared = comparedLotIds.includes(selectedLot.id);
+  const compareFull = !isCompared && comparedLotIds.length >= 3;
+
   const tracedCount = Object.keys(polygons).length;
 
   return (
@@ -501,7 +523,6 @@ export function PanoramaViewport({
       }`}
       aria-label="Vista aérea interactiva 360 grados de Residencial El Bosque Etapa 3"
     >
-      {/* Loading indicator while 360 equirectangular image downloads */}
       {!isLoaded && !loadFailed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white pointer-events-none z-10 bg-[#0f3d26]">
           <div className="w-10 h-10 rounded-full border-2 border-[#84cc16]/30 border-t-[#facc15] animate-spin" />
@@ -558,18 +579,21 @@ export function PanoramaViewport({
                     ? 'pointer-events-none'
                     : 'pointer-events-auto cursor-pointer'
                 }
+                onMouseEnter={() => setHoveredLotId(lote.id)}
+                onMouseLeave={() => setHoveredLotId(null)}
                 onClick={(e) => {
                   e.stopPropagation();
                   viewerInstanceRef.current?.stopAutoRotate?.();
                   setAutoRotate(false);
                   onSelectLot(lote.id);
+                  onOpenMobileSheet();
                 }}
               >
                 <polygon
                   points={pointsAttr}
                   fill={fill}
                   stroke={stroke}
-                  strokeWidth={isSelected ? 3 : 2}
+                  strokeWidth={isSelected ? 3.5 : 2}
                   strokeLinejoin="round"
                 />
                 <g transform={`translate(${centerX}, ${centerY})`}>
@@ -629,6 +653,32 @@ export function PanoramaViewport({
             </g>
           )}
         </svg>
+      )}
+
+      {/* Instant Hover Tooltip (Burbuja rápida al pasar el mouse sobre un lote en 360°) */}
+      {hoveredLot && !isDrawingMode && (
+        <div
+          data-toolbar="true"
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-35 pointer-events-none bg-[#0f3d26]/90 backdrop-blur-[10px] text-white px-3.5 py-1.5 rounded-xl border border-[#facc15] shadow-2xl flex items-center gap-2 text-xs font-mono-num font-bold animate-fadeIn"
+        >
+          <span className="text-[#facc15]">Lote {hoveredLot.num}</span>
+          <span>·</span>
+          <span>{hoveredLot.area}</span>
+          <span>·</span>
+          <span
+            className={`uppercase text-[10px] px-1.5 py-0.5 rounded ${
+              hoveredLot.estado === 'disponible'
+                ? 'bg-[#84cc16] text-[#0f3d26]'
+                : hoveredLot.estado === 'reservado'
+                ? 'bg-amber-400 text-[#0f3d26]'
+                : hoveredLot.estado === 'vendido'
+                ? 'bg-red-600 text-white'
+                : 'bg-[#84cc16]/40 text-[#0f3d26]'
+            }`}
+          >
+            {hoveredLot.estado}
+          </span>
+        </div>
       )}
 
       {/* Compact Mobile Top Zone Pills */}
@@ -776,7 +826,106 @@ export function PanoramaViewport({
         </div>
       )}
 
-      {/* Bottom-left glassmorphic 360 controls + Tour Guiado + Ver lista */}
+      {/* Floating Interactive Card (Burbuja Inmobiliaria al seleccionar un lote) */}
+      {!isMobileSheetOpen && !isDrawingMode && selectedLot && (
+        <div
+          data-toolbar="true"
+          className="absolute bottom-16 right-3 min-[860px]:bottom-5 min-[860px]:right-5 z-30 w-[calc(100%-24px)] max-w-xs bg-white/95 backdrop-blur-[12px] text-[#0f3d26] rounded-2xl border-2 border-[#facc15] shadow-2xl p-3.5 space-y-2.5 animate-slideUp"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <h4 className="text-lg font-extrabold font-display">
+                  Lote {selectedLot.num}
+                </h4>
+                <span className="font-mono-num text-sm font-extrabold text-[#0f3d26]">
+                  {selectedLot.area}
+                </span>
+              </div>
+              <p className="text-xs text-[#0f3d26]/75 font-medium">
+                {selectedLot.sector} · Residencial El Bosque
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onOpenMobileSheet}
+              className="px-2.5 py-1 rounded-lg bg-[#0f3d26] text-[#facc15] hover:bg-[#84cc16] hover:text-[#0f3d26] text-[11px] font-extrabold transition-colors cursor-pointer whitespace-nowrap"
+            >
+              Ver Ficha +
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <LotTags lote={selectedLot} compact />
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
+                selectedLot.estado === 'vendido'
+                  ? 'bg-red-600/15 text-red-700 border-red-600/40'
+                  : selectedLot.estado === 'reservado'
+                  ? 'bg-amber-400/30 text-amber-900 border-amber-500'
+                  : 'bg-[#84cc16]/25 text-[#0f3d26] border-[#84cc16]'
+              }`}
+            >
+              {selectedLot.estado === 'vendido' ? (
+                <>
+                  <Lock className="w-3 h-3" />
+                  <span>Vendido</span>
+                </>
+              ) : selectedLot.estado === 'reservado' ? (
+                <>
+                  <Clock className="w-3 h-3" />
+                  <span>Reservado</span>
+                </>
+              ) : selectedLot.estado === 'area_verde' ? (
+                <>
+                  <Trees className="w-3 h-3" />
+                  <span>Área Verde</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Disponible</span>
+                </>
+              )}
+            </span>
+          </div>
+
+          {selectedLot.estado === 'area_verde' ? (
+            <div className="py-2 px-3 rounded-xl bg-[#84cc16]/20 border border-[#84cc16] text-xs font-bold text-center">
+              Área de Recreación y Parque
+            </div>
+          ) : selectedLot.estado === 'vendido' ? (
+            <button
+              type="button"
+              disabled
+              className="w-full py-2.5 px-3 rounded-xl bg-red-50 text-red-700 border border-red-300 text-xs font-extrabold cursor-not-allowed"
+            >
+              Lote Vendido
+            </button>
+          ) : (
+            <a
+              href={buildWhatsappUrl(asesor, selectedLot)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl text-xs font-extrabold border-2 transition-colors ${
+                selectedLot.estado === 'reservado'
+                  ? 'bg-amber-400 hover:bg-amber-300 text-[#0f3d26] border-amber-500'
+                  : 'bg-[#0f3d26] hover:bg-[#84cc16] text-[#facc15] hover:text-[#0f3d26] border-[#84cc16]'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4 shrink-0" />
+              <span>
+                {selectedLot.estado === 'reservado'
+                  ? 'Consultar disponibilidad'
+                  : `Reservar Lote ${selectedLot.num} por WhatsApp`}
+              </span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Bottom-left glassmorphic 360 controls */}
       <div
         data-toolbar="true"
         className="absolute bottom-[22px] left-2.5 min-[860px]:bottom-5 min-[860px]:left-5 flex items-end gap-2 z-25 max-w-[calc(100%-20px)]"
@@ -882,7 +1031,7 @@ export function PanoramaViewport({
                 onClick={onOpenMobileSheet}
                 className="min-[860px]:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-[#0f3d26] bg-[#facc15] text-[#0f3d26] text-[11px] font-extrabold shadow-xl cursor-pointer whitespace-nowrap"
               >
-                <span>Ver Lotes y Plano</span>
+                <span>Ver Ficha y Lotes</span>
               </button>
             )}
           </div>

@@ -677,9 +677,12 @@ export default function App() {
           isTourActive={isTourActive}
           isMobileSheetOpen={isMobileSheetOpen}
           isAdminMode={isAdminMode}
+          asesor={asesor}
+          comparedLotIds={comparedLotIds}
           onSelectLot={(id) => handleSelectLot(id, false)}
           onSelectSector={handleSectorChange}
           onToggleTour={handleToggleTour}
+          onToggleCompare={handleToggleCompare}
           onOpenMobileSheet={() => setIsMobileSheetOpen(true)}
         />
 

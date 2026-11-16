@@ -27,7 +27,7 @@ export interface Asesor {
 }
 
 export const AERIAL_MAP_URL = 'https://files.catbox.moe/ef0u68.jpg';
-export const PANORAMA_360_URL = '/vista360.jpg';
+export const PANORAMA_360_URL = 'https://files.catbox.moe/rmju0q.JPG';
 export const PLAN_MAP_URL = 'https://files.catbox.moe/hwg12k.jpg';
 export const PRESENTATION_AUDIO_URL = 'https://files.catbox.moe/1dxlm2.mp3';
 // Reemplaza esta cadena vacía con la URL directa de tu logo cuando lo tengas alojado
