@@ -146,6 +146,7 @@ export function PanoramaViewport({
   onToggleCompare,
   onOpenMobileSheet,
 }: PanoramaViewportProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const viewerInstanceRef = useRef<PannellumViewerInstance | null>(null);
 
