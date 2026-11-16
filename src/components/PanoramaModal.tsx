@@ -326,8 +326,7 @@ export function PanoramaModal({
         return `  '${id}': [${pts}],`;
       });
     const snippet = `export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {
-${entries.join('
-')}
+${entries.join('\n')}
 };`;
     try {
       await navigator.clipboard.writeText(snippet);
