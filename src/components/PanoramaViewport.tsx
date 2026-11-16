@@ -391,10 +391,7 @@ export function PanoramaViewport({
           .join(', ');
         return `  '${id}': [${pts}],`;
       });
-    const snippet = `export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {
-${entries.join('
-')}
-};`;
+    const snippet = `export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {\n${entries.join('\n')}\n};`;
     try {
       await navigator.clipboard.writeText(snippet);
       setCopiedSnippet(true);
