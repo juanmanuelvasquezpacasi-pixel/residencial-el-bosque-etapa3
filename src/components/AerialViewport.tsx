@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Check,
+  Compass,
   Copy,
   Crosshair,
   Download,
@@ -34,6 +35,7 @@ interface AerialViewportProps {
   onSelectLot: (id: string) => void;
   onSelectSector: (sector: 'todos' | LotSector) => void;
   onToggleTour: () => void;
+  onOpenPanorama: () => void;
   onOpenMobileSheet: () => void;
   onAerialDimensions: (naturalWidth: number, naturalHeight: number) => void;
   onCalibrateLot: (id: string, ax: number, ay: number) => void;
@@ -56,6 +58,7 @@ export function AerialViewport({
   onSelectLot,
   onSelectSector,
   onToggleTour,
+  onOpenPanorama,
   onOpenMobileSheet,
   onAerialDimensions,
   onCalibrateLot,
@@ -792,29 +795,41 @@ export function AerialViewport({
             </div>
           )}
 
-          <button
-            type="button"
-            data-tour-toggle="true"
-            onClick={onToggleTour}
-            aria-pressed={isTourActive}
-            className={`inline-flex items-center gap-1.5 h-8 min-[860px]:h-11 px-2.5 min-[860px]:px-3.5 rounded-xl border text-[11px] min-[860px]:text-xs font-extrabold shadow-xl transition-all cursor-pointer whitespace-nowrap backdrop-blur-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-              isTourActive
-                ? 'bg-[#facc15] text-[#0f3d26] border-white hover:bg-[#84cc16]'
-                : 'bg-[#0f3d26]/85 text-[#facc15] border-[#facc15]/80 hover:bg-[#84cc16] hover:text-[#0f3d26] hover:border-[#0f3d26]'
-            }`}
-          >
-            {isTourActive ? (
-              <>
-                <Pause className="w-3.5 h-3.5 fill-current shrink-0" />
-                <span>Detener Tour</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-                <span>Tour Guiado</span>
-              </>
-            )}
-          </button>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              data-tour-toggle="true"
+              onClick={onToggleTour}
+              aria-pressed={isTourActive}
+              className={`inline-flex items-center gap-1.5 h-8 min-[860px]:h-11 px-2.5 min-[860px]:px-3.5 rounded-xl border text-[11px] min-[860px]:text-xs font-extrabold shadow-xl transition-all cursor-pointer whitespace-nowrap backdrop-blur-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                isTourActive
+                  ? 'bg-[#facc15] text-[#0f3d26] border-white hover:bg-[#84cc16]'
+                  : 'bg-[#0f3d26]/85 text-[#facc15] border-[#facc15]/80 hover:bg-[#84cc16] hover:text-[#0f3d26] hover:border-[#0f3d26]'
+              }`}
+            >
+              {isTourActive ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>Detener Tour</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>Tour Guiado</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenPanorama}
+              title="Explorar toma aérea esférica 360°"
+              className="inline-flex items-center gap-1.5 h-8 min-[860px]:h-11 px-2.5 min-[860px]:px-3.5 rounded-xl border border-[#0f3d26] bg-[#facc15] hover:bg-[#84cc16] text-[#0f3d26] text-[11px] min-[860px]:text-xs font-extrabold shadow-xl transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <Compass className="w-3.5 h-3.5 min-[860px]:w-4 min-[860px]:h-4 shrink-0" />
+              <span>Vista 360°</span>
+            </button>
+          </div>
 
           {!isMobileSheetOpen && (
             <button

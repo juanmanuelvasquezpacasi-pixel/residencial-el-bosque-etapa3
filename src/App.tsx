@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  Compass,
   Copy,
   Crosshair,
   Download,
@@ -15,6 +16,7 @@ import {
 import { AerialViewport } from './components/AerialViewport';
 import { CompareModal } from './components/CompareModal';
 import { LotPlanSidebar } from './components/LotPlanSidebar';
+import { PanoramaModal } from './components/PanoramaModal';
 import { PlanModal } from './components/PlanModal';
 import { RotatePhoneOverlay } from './components/RotatePhoneOverlay';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -101,6 +103,7 @@ export default function App() {
   const tourStepRef = useRef<number>(0);
 
   const [isPlanModalOpen, setIsPlanModalOpen] = useState<boolean>(false);
+  const [isPanoramaOpen, setIsPanoramaOpen] = useState<boolean>(false);
   const [isCompareOpen, setIsCompareOpen] = useState<boolean>(false);
   const [comparedLotIds, setComparedLotIds] = useState<string[]>([]);
   const [isCalibrating, setIsCalibrating] = useState<boolean>(false);
@@ -550,6 +553,20 @@ export default function App() {
             </div>
           )}
 
+          <button
+            type="button"
+            onClick={() => {
+              setIsTourActive(false);
+              setIsPanoramaOpen(true);
+            }}
+            title="Explorar fotografía aérea 360° interactiva"
+            aria-label="Vista 360 grados"
+            className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg bg-[#facc15]/20 hover:bg-[#facc15] text-[#facc15] hover:text-[#0f3d26] border border-[#facc15]/80 text-xs font-extrabold transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15]"
+          >
+            <Compass className="w-3.5 h-3.5 shrink-0" />
+            <span>360°</span>
+          </button>
+
           <a
             href={GOOGLE_MAPS_URL}
             target="_blank"
@@ -678,6 +695,10 @@ export default function App() {
           onSelectLot={(id) => handleSelectLot(id, false)}
           onSelectSector={handleSectorChange}
           onToggleTour={handleToggleTour}
+          onOpenPanorama={() => {
+            setIsTourActive(false);
+            setIsPanoramaOpen(true);
+          }}
           onOpenMobileSheet={() => setIsMobileSheetOpen(true)}
           onAerialDimensions={handleAerialDimensions}
           onCalibrateLot={handleCalibrateLot}
@@ -750,6 +771,18 @@ export default function App() {
         isOpen={showWelcome}
         onEnterWithAudio={handleEnterWithAudio}
         onEnterWithoutAudio={handleEnterWithoutAudio}
+      />
+
+      <PanoramaModal
+        isOpen={isPanoramaOpen}
+        lotes={displayLotes}
+        selectedLot={selectedLot}
+        asesor={asesor}
+        isAdminMode={isAdminMode}
+        onSelectLot={(id) => {
+          setSelectedLotId(id);
+        }}
+        onClose={() => setIsPanoramaOpen(false)}
       />
 
       <PlanModal
