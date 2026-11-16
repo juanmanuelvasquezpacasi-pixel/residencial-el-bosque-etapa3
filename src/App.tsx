@@ -13,10 +13,9 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { AerialViewport } from './components/AerialViewport';
 import { CompareModal } from './components/CompareModal';
 import { LotPlanSidebar } from './components/LotPlanSidebar';
-import { PanoramaModal } from './components/PanoramaModal';
+import { PanoramaViewport } from './components/PanoramaViewport';
 import { PlanModal } from './components/PlanModal';
 import { RotatePhoneOverlay } from './components/RotatePhoneOverlay';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -553,20 +552,6 @@ export default function App() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsTourActive(false);
-              setIsPanoramaOpen(true);
-            }}
-            title="Explorar fotografía aérea 360° interactiva"
-            aria-label="Vista 360 grados"
-            className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg bg-[#facc15]/20 hover:bg-[#facc15] text-[#facc15] hover:text-[#0f3d26] border border-[#facc15]/80 text-xs font-extrabold transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15]"
-          >
-            <Compass className="w-3.5 h-3.5 shrink-0" />
-            <span>360°</span>
-          </button>
-
           <a
             href={GOOGLE_MAPS_URL}
             target="_blank"
@@ -683,7 +668,7 @@ export default function App() {
 
       {/* Native-Style Split: 46% Top Aerial + 54% Rounded Bottom Sheet on mobile (<860px), Horizontal on desktop */}
       <main className="flex-1 flex flex-col min-[860px]:flex-row overflow-hidden relative bg-[#0f3d26]">
-        <AerialViewport
+        <PanoramaViewport
           lotes={displayLotes}
           selectedLot={selectedLot}
           sectorFilter={sectorFilter}
@@ -691,20 +676,11 @@ export default function App() {
           sectorFocusRequest={sectorFocusRequest}
           isTourActive={isTourActive}
           isMobileSheetOpen={isMobileSheetOpen}
-          isCalibrating={isAdminMode && isCalibrating}
+          isAdminMode={isAdminMode}
           onSelectLot={(id) => handleSelectLot(id, false)}
           onSelectSector={handleSectorChange}
           onToggleTour={handleToggleTour}
-          onOpenPanorama={() => {
-            setIsTourActive(false);
-            setIsPanoramaOpen(true);
-          }}
           onOpenMobileSheet={() => setIsMobileSheetOpen(true)}
-          onAerialDimensions={handleAerialDimensions}
-          onCalibrateLot={handleCalibrateLot}
-          onExportJson={handleExportJson}
-          onResetCalibration={handleResetCalibration}
-          hasCustomCalibration={hasCustomCalibration}
         />
 
         <LotPlanSidebar
@@ -771,18 +747,6 @@ export default function App() {
         isOpen={showWelcome}
         onEnterWithAudio={handleEnterWithAudio}
         onEnterWithoutAudio={handleEnterWithoutAudio}
-      />
-
-      <PanoramaModal
-        isOpen={isPanoramaOpen}
-        lotes={displayLotes}
-        selectedLot={selectedLot}
-        asesor={asesor}
-        isAdminMode={isAdminMode}
-        onSelectLot={(id) => {
-          setSelectedLotId(id);
-        }}
-        onClose={() => setIsPanoramaOpen(false)}
       />
 
       <PlanModal

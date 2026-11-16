@@ -1,0 +1,893 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Check,
+  Copy,
+  Download,
+  Edit3,
+  LocateFixed,
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+  Undo2,
+} from 'lucide-react';
+import {
+  GUIDED_TOUR_LOT_IDS,
+  Lote,
+  LotSector,
+  PANORAMA_360_URL,
+  SECTOR_FILTERS,
+} from '../data/lotes';
+import { POLIGONOS_360_LOTES, SphericalPoint } from '../data/poligonos360';
+import { LotTags } from './LotTags';
+
+interface PanoramaViewportProps {
+  lotes: Lote[];
+  selectedLot: Lote;
+  sectorFilter: 'todos' | LotSector;
+  focusRequest: { seq: number; zoom: boolean };
+  sectorFocusRequest: { seq: number; sector: 'todos' | LotSector };
+  isTourActive: boolean;
+  isMobileSheetOpen: boolean;
+  isAdminMode: boolean;
+  onSelectLot: (id: string) => void;
+  onSelectSector: (sector: 'todos' | LotSector) => void;
+  onToggleTour: () => void;
+  onOpenMobileSheet: () => void;
+}
+
+interface PannellumViewerInstance {
+  destroy?: () => void;
+  startAutoRotate?: (speed?: number) => void;
+  stopAutoRotate?: () => void;
+  getPitch?: () => number;
+  getYaw?: () => number;
+  getHfov?: () => number;
+  setPitch?: (pitch: number, animated?: boolean | number) => void;
+  setYaw?: (yaw: number, animated?: boolean | number) => void;
+  setHfov?: (hfov: number, animated?: boolean | number) => void;
+  mouseEventToCoords?: (event: MouseEvent) => [number, number];
+  on?: (event: string, cb: () => void) => void;
+}
+
+declare global {
+  interface Window {
+    pannellum?: {
+      viewer: (
+        container: HTMLElement | string,
+        config: Record<string, unknown>
+      ) => PannellumViewerInstance;
+    };
+  }
+}
+
+const STORAGE_360_KEY = 'tauren_el_bosque_360_polygons_v1';
+
+function loadSaved360Polygons(): Record<string, SphericalPoint[]> {
+  if (typeof window === 'undefined') return { ...POLIGONOS_360_LOTES };
+  try {
+    const raw = localStorage.getItem(STORAGE_360_KEY);
+    if (!raw) return { ...POLIGONOS_360_LOTES };
+    const parsed = JSON.parse(raw) as Record<string, SphericalPoint[]>;
+    return { ...POLIGONOS_360_LOTES, ...parsed };
+  } catch {
+    return { ...POLIGONOS_360_LOTES };
+  }
+}
+
+function projectSphericalToScreen(
+  ptPitchDeg: number,
+  ptYawDeg: number,
+  camPitchDeg: number,
+  camYawDeg: number,
+  hfovDeg: number,
+  width: number,
+  height: number
+): { x: number; y: number } | null {
+  if (width <= 0 || height <= 0) return null;
+
+  const deg2rad = Math.PI / 180;
+  const phi = ptPitchDeg * deg2rad;
+  const lambda = ptYawDeg * deg2rad;
+  const phi0 = camPitchDeg * deg2rad;
+  const lambda0 = camYawDeg * deg2rad;
+  const dLambda = lambda - lambda0;
+
+  const cosPhi = Math.cos(phi);
+  const sinPhi = Math.sin(phi);
+  const cosPhi0 = Math.cos(phi0);
+  const sinPhi0 = Math.sin(phi0);
+  const cosDLambda = Math.cos(dLambda);
+
+  const cosC = sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosDLambda;
+  if (cosC <= 0.05) {
+    return null;
+  }
+
+  const f = width / (2 * Math.tan((hfovDeg * deg2rad) / 2));
+  const x = width / 2 + (f * (cosPhi * Math.sin(dLambda))) / cosC;
+  const y = height / 2 - (f * (cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosDLambda)) / cosC;
+
+  return { x, y };
+}
+
+export function PanoramaViewport({
+  lotes,
+  selectedLot,
+  sectorFilter,
+  focusRequest,
+  sectorFocusRequest,
+  isTourActive,
+  isMobileSheetOpen,
+  isAdminMode,
+  onSelectLot,
+  onSelectSector,
+  onToggleTour,
+  onOpenMobileSheet,
+}: PanoramaViewportProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const viewerInstanceRef = useRef<PannellumViewerInstance | null>(null);
+
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(!isAdminMode);
+  const [polygons, setPolygons] = useState<Record<string, SphericalPoint[]>>(() =>
+    loadSaved360Polygons()
+  );
+  const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
+  const [editingLotId, setEditingLotId] = useState<string>(selectedLot.id);
+  const [draftPoints, setDraftPoints] = useState<SphericalPoint[]>([]);
+  const [copiedSnippet, setCopiedSnippet] = useState<boolean>(false);
+
+  const [cameraState, setCameraState] = useState<{
+    pitch: number;
+    yaw: number;
+    hfov: number;
+    width: number;
+    height: number;
+  }>({ pitch: -24, yaw: 0, hfov: 105, width: 1280, height: 720 });
+
+  useEffect(() => {
+    setEditingLotId(selectedLot.id);
+  }, [selectedLot.id]);
+
+  // Initialize Pannellum 360° viewer immediately on mount (preloads behind WelcomeModal!)
+  useEffect(() => {
+    const container = viewerContainerRef.current;
+    if (!container) return;
+
+    let cancelled = false;
+    let retryTimer: number | null = null;
+    let rafId = 0;
+
+    const initViewer = () => {
+      if (cancelled || !viewerContainerRef.current) return;
+      if (!window.pannellum || typeof window.pannellum.viewer !== 'function') {
+        retryTimer = window.setTimeout(initViewer, 150);
+        return;
+      }
+
+      try {
+        // First try local /rmju0q.JPG if uploaded to public/, otherwise fallback to PANORAMA_360_URL
+        const instance = window.pannellum.viewer(viewerContainerRef.current, {
+          type: 'equirectangular',
+          panorama: PANORAMA_360_URL,
+          autoLoad: true,
+          autoRotate: isAdminMode ? 0 : -1.5,
+          compass: false,
+          showControls: false,
+          mouseZoom: true,
+          hfov: 105,
+          minHfov: 42,
+          maxHfov: 120,
+          pitch: -24,
+          yaw: 0,
+          crossOrigin: 'anonymous',
+          strings: {
+            loadingLabel: 'Cargando vista aérea 360°...',
+            errorMsg: 'No se pudo cargar la imagen 360°.',
+          },
+        });
+
+        instance.on?.('load', () => {
+          if (!cancelled) setIsLoaded(true);
+        });
+        instance.on?.('error', () => {
+          if (!cancelled) setLoadFailed(true);
+        });
+
+        viewerInstanceRef.current = instance;
+      } catch {
+        setLoadFailed(true);
+      }
+
+      const syncCameraLoop = () => {
+        const inst = viewerInstanceRef.current;
+        const el = viewerContainerRef.current;
+        if (inst && el) {
+          const pitch = inst.getPitch?.() ?? -24;
+          const yaw = inst.getYaw?.() ?? 0;
+          const hfov = inst.getHfov?.() ?? 105;
+          const width = el.clientWidth;
+          const height = el.clientHeight;
+          setCameraState((prev) => {
+            if (
+              Math.abs(prev.pitch - pitch) < 0.03 &&
+              Math.abs(prev.yaw - yaw) < 0.03 &&
+              Math.abs(prev.hfov - hfov) < 0.03 &&
+              prev.width === width &&
+              prev.height === height
+            ) {
+              return prev;
+            }
+            return { pitch, yaw, hfov, width, height };
+          });
+        }
+        rafId = window.requestAnimationFrame(syncCameraLoop);
+      };
+      rafId = window.requestAnimationFrame(syncCameraLoop);
+    };
+
+    initViewer();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) window.clearTimeout(retryTimer);
+      window.cancelAnimationFrame(rafId);
+      if (viewerInstanceRef.current?.destroy) {
+        try {
+          viewerInstanceRef.current.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      viewerInstanceRef.current = null;
+    };
+  }, [isAdminMode]);
+
+  // Focus camera onto selected lot polygon if traced in 360°
+  useEffect(() => {
+    if (!focusRequest.zoom) return;
+    const poly = polygons[selectedLot.id];
+    const inst = viewerInstanceRef.current;
+    if (!poly || poly.length === 0 || !inst) return;
+
+    const avgPitch = poly.reduce((acc, p) => acc + p.pitch, 0) / poly.length;
+    const avgYaw = poly.reduce((acc, p) => acc + p.yaw, 0) / poly.length;
+    inst.stopAutoRotate?.();
+    setAutoRotate(false);
+    inst.setPitch?.(avgPitch, 600);
+    inst.setYaw?.(avgYaw, 600);
+    const curHfov = inst.getHfov?.() ?? 105;
+    if (curHfov > 75) {
+      inst.setHfov?.(72, 600);
+    }
+  }, [selectedLot.id, focusRequest, polygons]);
+
+  // Focus camera onto sector center if lots in that sector have 360° polygons
+  useEffect(() => {
+    if (sectorFocusRequest.seq === 0) return;
+    const inst = viewerInstanceRef.current;
+    if (!inst) return;
+
+    if (sectorFocusRequest.sector === 'todos') {
+      inst.setPitch?.(-24, 600);
+      inst.setHfov?.(105, 600);
+      return;
+    }
+
+    const sectorPts: SphericalPoint[] = [];
+    for (const l of lotes) {
+      if (l.sector === sectorFocusRequest.sector && polygons[l.id]) {
+        sectorPts.push(...polygons[l.id]);
+      }
+    }
+    if (sectorPts.length > 0) {
+      const avgPitch = sectorPts.reduce((acc, p) => acc + p.pitch, 0) / sectorPts.length;
+      const avgYaw = sectorPts.reduce((acc, p) => acc + p.yaw, 0) / sectorPts.length;
+      inst.stopAutoRotate?.();
+      setAutoRotate(false);
+      inst.setPitch?.(avgPitch, 600);
+      inst.setYaw?.(avgYaw, 600);
+      inst.setHfov?.(82, 600);
+    }
+  }, [sectorFocusRequest, lotes, polygons]);
+
+  const persistPolygons = useCallback((next: Record<string, SphericalPoint[]>) => {
+    setPolygons(next);
+    try {
+      localStorage.setItem(STORAGE_360_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore storage limits
+    }
+  }, []);
+
+  const handleToggleRotate = () => {
+    const inst = viewerInstanceRef.current;
+    if (!inst) return;
+    if (autoRotate) {
+      inst.stopAutoRotate?.();
+      setAutoRotate(false);
+    } else {
+      inst.startAutoRotate?.(-1.5);
+      setAutoRotate(true);
+    }
+  };
+
+  const handleToggleDrawing = () => {
+    const next = !isDrawingMode;
+    setIsDrawingMode(next);
+    setDraftPoints([]);
+    if (next && viewerInstanceRef.current?.stopAutoRotate) {
+      viewerInstanceRef.current.stopAutoRotate();
+      setAutoRotate(false);
+    }
+  };
+
+  const handleCanvasClickForTrace = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isAdminMode || !isDrawingMode || !viewerInstanceRef.current?.mouseEventToCoords) return;
+    if ((e.target as HTMLElement).closest('[data-toolbar="true"]')) return;
+
+    const coords = viewerInstanceRef.current.mouseEventToCoords(e.nativeEvent);
+    if (!coords || coords.length < 2) return;
+
+    const pt: SphericalPoint = {
+      pitch: Number(coords[0].toFixed(2)),
+      yaw: Number(coords[1].toFixed(2)),
+    };
+
+    const updated = [...draftPoints, pt];
+    if (updated.length >= 4) {
+      const nextPolys = { ...polygons, [editingLotId]: updated };
+      persistPolygons(nextPolys);
+      setDraftPoints([]);
+      onSelectLot(editingLotId);
+
+      const idx = lotes.findIndex((l) => l.id === editingLotId);
+      if (idx >= 0 && idx < lotes.length - 1) {
+        setEditingLotId(lotes[idx + 1].id);
+      }
+    } else {
+      setDraftPoints(updated);
+    }
+  };
+
+  const handleSaveDraftEarly = () => {
+    if (draftPoints.length < 3) return;
+    const nextPolys = { ...polygons, [editingLotId]: draftPoints };
+    persistPolygons(nextPolys);
+    setDraftPoints([]);
+    onSelectLot(editingLotId);
+  };
+
+  const handleDeleteLotPolygon = (lotId: string) => {
+    const nextPolys = { ...polygons };
+    delete nextPolys[lotId];
+    persistPolygons(nextPolys);
+  };
+
+  const handleCopyPolygonsSnippet = async () => {
+    const entries = Object.keys(polygons)
+      .sort()
+      .map((id) => {
+        const pts = polygons[id]
+          .map((p) => `{ pitch: ${p.pitch}, yaw: ${p.yaw} }`)
+          .join(', ');
+        return `  '${id}': [${pts}],`;
+      });
+    const snippet = `export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {\n${entries.join('\n')}\n};`;
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 2200);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = snippet;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 2200);
+    }
+  };
+
+  const handleExportPolygonsJson = () => {
+    const blob = new Blob([JSON.stringify(polygons, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'poligonos-360-el-bosque-etapa3.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const zoomStep = (deltaHfov: number) => {
+    const inst = viewerInstanceRef.current;
+    if (!inst) return;
+    const cur = inst.getHfov?.() ?? 105;
+    const next = Math.min(120, Math.max(42, cur + deltaHfov));
+    inst.setHfov?.(next, 250);
+  };
+
+  const resetCamera = () => {
+    const inst = viewerInstanceRef.current;
+    if (!inst) return;
+    inst.setPitch?.(-24, 450);
+    inst.setYaw?.(0, 450);
+    inst.setHfov?.(105, 450);
+  };
+
+  const projectedLots = useMemo(() => {
+    const result: Array<{
+      lote: Lote;
+      pointsAttr: string;
+      centerX: number;
+      centerY: number;
+    }> = [];
+
+    for (const lote of lotes) {
+      const poly = polygons[lote.id];
+      if (!poly || poly.length < 3) continue;
+
+      const screenPts: Array<{ x: number; y: number }> = [];
+      let valid = true;
+      for (const sp of poly) {
+        const projected = projectSphericalToScreen(
+          sp.pitch,
+          sp.yaw,
+          cameraState.pitch,
+          cameraState.yaw,
+          cameraState.hfov,
+          cameraState.width,
+          cameraState.height
+        );
+        if (!projected) {
+          valid = false;
+          break;
+        }
+        screenPts.push(projected);
+      }
+
+      if (!valid || screenPts.length < 3) continue;
+
+      const sumX = screenPts.reduce((acc, p) => acc + p.x, 0);
+      const sumY = screenPts.reduce((acc, p) => acc + p.y, 0);
+      result.push({
+        lote,
+        pointsAttr: screenPts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '),
+        centerX: sumX / screenPts.length,
+        centerY: sumY / screenPts.length,
+      });
+    }
+    return result;
+  }, [lotes, polygons, cameraState]);
+
+  const projectedDraft = useMemo(() => {
+    return draftPoints
+      .map((sp) =>
+        projectSphericalToScreen(
+          sp.pitch,
+          sp.yaw,
+          cameraState.pitch,
+          cameraState.yaw,
+          cameraState.hfov,
+          cameraState.width,
+          cameraState.height
+        )
+      )
+      .filter((p): p is { x: number; y: number } => Boolean(p));
+  }, [draftPoints, cameraState]);
+
+  const tourIndex = GUIDED_TOUR_LOT_IDS.indexOf(selectedLot.id);
+  const tracedCount = Object.keys(polygons).length;
+
+  return (
+    <div
+      ref={viewportRef}
+      onClick={handleCanvasClickForTrace}
+      className={`relative w-full ${
+        isMobileSheetOpen ? 'h-[calc(46%+14px)] landscape:h-full' : 'h-full'
+      } min-[860px]:h-full min-[860px]:flex-1 shrink-0 overflow-hidden bg-[#0f3d26] select-none transition-[height] duration-300 ${
+        isDrawingMode ? 'cursor-crosshair' : 'cursor-grab'
+      }`}
+      aria-label="Vista aérea interactiva 360 grados de Residencial El Bosque Etapa 3"
+    >
+      {/* Loading indicator while 360 equirectangular image downloads */}
+      {!isLoaded && !loadFailed && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white pointer-events-none z-10 bg-[#0f3d26]">
+          <div className="w-10 h-10 rounded-full border-2 border-[#84cc16]/30 border-t-[#facc15] animate-spin" />
+          <p className="text-sm font-bold tracking-wide text-[#facc15]">
+            Cargando vista aérea 360°...
+          </p>
+          <p className="text-xs text-white/75 max-w-xs text-center px-4">
+            Preparando fotografía panorámica esférica de Residencial El Bosque
+          </p>
+        </div>
+      )}
+
+      {/* Pannellum 360° WebGL Canvas */}
+      <div ref={viewerContainerRef} className="w-full h-full" />
+
+      {/* Live Projected SVG Layer for Interactive 360° Lot Polygons */}
+      {isLoaded && !loadFailed && (
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none z-15"
+          viewBox={`0 0 ${Math.max(1, cameraState.width)} ${Math.max(1, cameraState.height)}`}
+        >
+          {projectedLots.map(({ lote, pointsAttr, centerX, centerY }) => {
+            const isSelected = selectedLot.id === lote.id;
+            const isDimmed = sectorFilter !== 'todos' && lote.sector !== sectorFilter;
+
+            let fill = 'rgba(132, 204, 22, 0.28)';
+            let stroke = '#84cc16';
+
+            if (lote.estado === 'vendido') {
+              fill = 'rgba(220, 38, 38, 0.48)';
+              stroke = '#ef4444';
+            } else if (lote.estado === 'reservado') {
+              fill = 'rgba(250, 204, 21, 0.40)';
+              stroke = '#facc15';
+            } else if (lote.estado === 'area_verde') {
+              fill = 'rgba(34, 197, 94, 0.25)';
+              stroke = '#4ade80';
+            }
+
+            if (isSelected) {
+              fill =
+                lote.estado === 'vendido'
+                  ? 'rgba(220, 38, 38, 0.68)'
+                  : 'rgba(250, 204, 21, 0.56)';
+              stroke = '#ffffff';
+            }
+
+            return (
+              <g
+                key={lote.id}
+                style={{ opacity: isDimmed ? 0.2 : 1 }}
+                className={
+                  isDrawingMode || isDimmed
+                    ? 'pointer-events-none'
+                    : 'pointer-events-auto cursor-pointer'
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  viewerInstanceRef.current?.stopAutoRotate?.();
+                  setAutoRotate(false);
+                  onSelectLot(lote.id);
+                }}
+              >
+                <polygon
+                  points={pointsAttr}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={isSelected ? 3 : 2}
+                  strokeLinejoin="round"
+                />
+                <g transform={`translate(${centerX}, ${centerY})`}>
+                  <rect
+                    x={lote.estado === 'vendido' ? -24 : -13}
+                    y={-10}
+                    width={lote.estado === 'vendido' ? 48 : 26}
+                    height={20}
+                    rx={5}
+                    fill={
+                      lote.estado === 'vendido'
+                        ? '#dc2626'
+                        : lote.estado === 'reservado'
+                        ? '#facc15'
+                        : '#0f3d26'
+                    }
+                    stroke="#ffffff"
+                    strokeWidth={1.2}
+                  />
+                  <text
+                    x={0}
+                    y={4}
+                    textAnchor="middle"
+                    fill={lote.estado === 'reservado' ? '#0f3d26' : '#ffffff'}
+                    fontSize="10"
+                    fontWeight="800"
+                    fontFamily="JetBrains Mono, monospace"
+                  >
+                    {lote.estado === 'vendido' ? `${lote.num} VEND` : lote.num}
+                  </text>
+                </g>
+              </g>
+            );
+          })}
+
+          {/* Draft Polygon while Admin traces 4 corners */}
+          {isDrawingMode && projectedDraft.length > 0 && (
+            <g>
+              <polyline
+                points={projectedDraft.map((p) => `${p.x},${p.y}`).join(' ')}
+                fill="rgba(250, 204, 21, 0.28)"
+                stroke="#facc15"
+                strokeWidth={2.5}
+                strokeDasharray="5,4"
+              />
+              {projectedDraft.map((p, i) => (
+                <circle
+                  key={i}
+                  cx={p.x}
+                  cy={p.y}
+                  r={5}
+                  fill="#facc15"
+                  stroke="#0f3d26"
+                  strokeWidth={2}
+                />
+              ))}
+            </g>
+          )}
+        </svg>
+      )}
+
+      {/* Compact Mobile Top Zone Pills */}
+      <div
+        data-toolbar="true"
+        className="min-[860px]:hidden absolute top-1.5 inset-x-0 z-25 px-2"
+      >
+        <div
+          role="navigation"
+          aria-label="Zonas de lotización"
+          className="flex items-center gap-1 overflow-x-auto no-scrollbar"
+        >
+          {SECTOR_FILTERS.map((sec) => {
+            const active = sectorFilter === sec.value;
+            return (
+              <button
+                key={sec.value}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectSector(sec.value);
+                }}
+                className={`py-[5px] px-[11px] rounded-full text-[11px] leading-tight font-bold border transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-sm ${
+                  active
+                    ? 'bg-[#facc15] text-[#0f3d26] border-[#facc15]'
+                    : 'bg-[#0f3d26]/80 backdrop-blur-[10px] text-white border-[#facc15]/45 hover:bg-[#0f3d26]'
+                }`}
+              >
+                {sec.mobileLabel}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Admin 360° Polygon Tracer Bar (?admin=1) */}
+      {isAdminMode && (
+        <div
+          data-toolbar="true"
+          className="absolute top-11 min-[860px]:top-3 left-1/2 -translate-x-1/2 z-30 w-[94%] max-w-2xl flex flex-col items-center gap-2"
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleToggleDrawing}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border text-xs font-extrabold shadow-lg cursor-pointer transition-colors ${
+                isDrawingMode
+                  ? 'bg-[#84cc16] text-[#0f3d26] border-white'
+                  : 'bg-[#0f3d26]/90 text-[#facc15] border-[#facc15]'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>
+                {isDrawingMode
+                  ? 'Finalizar Trazado 360°'
+                  : `Trazar Lotes en 360° (${tracedCount}/46)`}
+              </span>
+            </button>
+          </div>
+
+          {isDrawingMode && (
+            <div className="w-full bg-[#0f3d26]/95 backdrop-blur-[12px] border border-[#facc15] rounded-2xl p-2.5 shadow-2xl space-y-2 text-white">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-[#facc15]">Lote:</span>
+                  <select
+                    aria-label="Seleccionar lote a trazar en 360"
+                    value={editingLotId}
+                    onChange={(e) => {
+                      setEditingLotId(e.target.value);
+                      setDraftPoints([]);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-white text-[#0f3d26] text-xs font-extrabold font-mono-num"
+                  >
+                    {lotes.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        Lote {l.num} ({l.area}) {polygons[l.id] ? '✓' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[11px] text-[#84cc16] font-bold">
+                    Esquina {draftPoints.length}/4
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {draftPoints.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDraftPoints((prev) => prev.slice(0, -1))}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11px] font-bold cursor-pointer"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      <span>Deshacer</span>
+                    </button>
+                  )}
+                  {draftPoints.length >= 3 && (
+                    <button
+                      type="button"
+                      onClick={handleSaveDraftEarly}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#84cc16] text-[#0f3d26] text-[11px] font-extrabold cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Cerrar ({draftPoints.length} pts)</span>
+                    </button>
+                  )}
+                  {polygons[editingLotId] && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteLotPolygon(editingLotId)}
+                      title="Borrar polígono de este lote"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-bold cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/15 text-[11px]">
+                <span className="text-white/80">
+                  Haz clic en las 4 esquinas del Lote {editingLotId} sobre la vista 360°.
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleCopyPolygonsSnippet}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#facc15] text-[#0f3d26] font-extrabold cursor-pointer"
+                  >
+                    {copiedSnippet ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedSnippet ? '¡Copiado!' : `Copiar código (${tracedCount})`}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportPolygonsJson}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold cursor-pointer"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>JSON</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bottom-left glassmorphic 360 controls + Tour Guiado + Ver lista */}
+      <div
+        data-toolbar="true"
+        className="absolute bottom-[22px] left-2.5 min-[860px]:bottom-5 min-[860px]:left-5 flex items-end gap-2 z-25 max-w-[calc(100%-20px)]"
+      >
+        <div className="flex flex-col gap-1 min-[860px]:gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => zoomStep(-12)}
+            title="Acercar vista 360°"
+            aria-label="Acercar vista 360"
+            className="w-8 h-8 min-[860px]:w-11 min-[860px]:h-11 rounded-xl border border-[#facc15]/60 bg-[#0f3d26]/80 backdrop-blur-[10px] text-white hover:bg-[#84cc16] hover:text-[#0f3d26] transition-all duration-200 flex items-center justify-center shadow-lg cursor-pointer"
+          >
+            <Plus className="w-4 h-4 min-[860px]:w-5 min-[860px]:h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => zoomStep(12)}
+            title="Alejar vista 360°"
+            aria-label="Alejar vista 360"
+            className="w-8 h-8 min-[860px]:w-11 min-[860px]:h-11 rounded-xl border border-[#facc15]/60 bg-[#0f3d26]/80 backdrop-blur-[10px] text-white hover:bg-[#84cc16] hover:text-[#0f3d26] transition-all duration-200 flex items-center justify-center shadow-lg cursor-pointer"
+          >
+            <Minus className="w-4 h-4 min-[860px]:w-5 min-[860px]:h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleRotate}
+            title={autoRotate ? 'Pausar giro 360°' : 'Activar giro automático 360°'}
+            aria-label={autoRotate ? 'Pausar giro 360' : 'Activar giro automático 360'}
+            className={`w-8 h-8 min-[860px]:w-11 min-[860px]:h-11 rounded-xl border backdrop-blur-[10px] transition-all duration-200 flex items-center justify-center shadow-lg cursor-pointer ${
+              autoRotate
+                ? 'bg-[#84cc16] text-[#0f3d26] border-white'
+                : 'bg-[#0f3d26]/80 text-[#facc15] border-[#facc15]/60 hover:bg-[#84cc16] hover:text-[#0f3d26]'
+            }`}
+          >
+            <RotateCw className={`w-4 h-4 ${autoRotate ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
+          </button>
+          <button
+            type="button"
+            onClick={resetCamera}
+            title="Centrar vista inicial 360°"
+            aria-label="Centrar vista inicial 360"
+            className="w-8 h-8 min-[860px]:w-11 min-[860px]:h-11 rounded-xl border border-[#facc15]/50 bg-[#0f3d26]/80 backdrop-blur-[10px] text-white hover:bg-[#84cc16] hover:text-[#0f3d26] transition-all duration-200 flex items-center justify-center shadow-lg cursor-pointer"
+          >
+            <LocateFixed className="w-3.5 h-3.5 min-[860px]:w-4 min-[860px]:h-4" />
+          </button>
+        </div>
+
+        <div className="flex flex-col items-start gap-1.5">
+          {isTourActive && (
+            <div className="pointer-events-none bg-[#0f3d26]/88 backdrop-blur-[10px] border border-[#facc15]/80 rounded-2xl p-2 sm:p-3 text-white shadow-2xl w-52 sm:w-68 space-y-1 transition-all duration-300">
+              <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px]">
+                <span className="inline-flex items-center gap-1.5 font-extrabold text-[#84cc16] uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-[#84cc16] animate-pulse" />
+                  <span>Recorrido</span>
+                </span>
+                <span className="font-mono-num text-[#facc15] font-bold">
+                  {tourIndex >= 0 ? `${tourIndex + 1}/${GUIDED_TOUR_LOT_IDS.length}` : 'En vivo'}
+                </span>
+              </div>
+
+              <div className="flex items-baseline justify-between gap-2">
+                <strong className="text-sm sm:text-base font-extrabold font-display text-white">
+                  Lote {selectedLot.num}
+                </strong>
+                <span className="font-mono-num text-xs sm:text-sm font-extrabold text-[#facc15]">
+                  {selectedLot.area}
+                </span>
+              </div>
+
+              <p className="text-[10px] sm:text-[11px] text-white/80 font-medium">{selectedLot.sector}</p>
+              <LotTags lote={selectedLot} variant="dark" compact />
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              data-tour-toggle="true"
+              onClick={onToggleTour}
+              aria-pressed={isTourActive}
+              className={`inline-flex items-center gap-1.5 h-8 min-[860px]:h-11 px-2.5 min-[860px]:px-3.5 rounded-xl border text-[11px] min-[860px]:text-xs font-extrabold shadow-xl transition-all cursor-pointer whitespace-nowrap backdrop-blur-[10px] ${
+                isTourActive
+                  ? 'bg-[#facc15] text-[#0f3d26] border-white hover:bg-[#84cc16]'
+                  : 'bg-[#0f3d26]/85 text-[#facc15] border-[#facc15]/80 hover:bg-[#84cc16] hover:text-[#0f3d26]'
+              }`}
+            >
+              {isTourActive ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>Detener Tour</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>Tour Guiado</span>
+                </>
+              )}
+            </button>
+
+            {!isMobileSheetOpen && (
+              <button
+                type="button"
+                onClick={onOpenMobileSheet}
+                className="min-[860px]:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-[#0f3d26] bg-[#facc15] text-[#0f3d26] text-[11px] font-extrabold shadow-xl cursor-pointer whitespace-nowrap"
+              >
+                <span>Ver Lotes y Plano</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
