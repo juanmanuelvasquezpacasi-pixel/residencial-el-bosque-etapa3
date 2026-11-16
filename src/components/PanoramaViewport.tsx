@@ -130,7 +130,6 @@ function projectSphericalToScreen(
 }
 
 export function PanoramaViewport({
-  const viewportRef = useRef<HTMLDivElement>(null);
   lotes,
   selectedLot,
   sectorFilter,
