@@ -230,9 +230,6 @@ export function PanoramaViewport({
         });
 
         viewerInstanceRef.current = instance;
-      } catch (err) {
-        setLoadFailed(true);
-      }
       } catch {
         setLoadFailed(true);
       }
