@@ -3,11 +3,14 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Compass,
   Copy,
   Download,
   Edit3,
+  Layers,
   LocateFixed,
   Lock,
+  MapPin,
   MessageCircle,
   Minus,
   Pause,
@@ -143,7 +146,6 @@ export function PanoramaViewport({
   onToggleCompare,
   onOpenMobileSheet,
 }: PanoramaViewportProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const viewerInstanceRef = useRef<PannellumViewerInstance | null>(null);
 
@@ -170,6 +172,16 @@ export function PanoramaViewport({
   useEffect(() => {
     setEditingLotId(selectedLot.id);
   }, [selectedLot.id]);
+
+  // Robust loading timeout fallback (if WebGL/Pannellum takes > 7s, forces fallback view)
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!isLoaded) {
+        setLoadFailed(true);
+      }
+    }, 7000);
+    return () => window.clearTimeout(timer);
+  }, [isLoaded]);
 
   useEffect(() => {
     const container = viewerContainerRef.current;
@@ -208,7 +220,10 @@ export function PanoramaViewport({
         });
 
         instance.on?.('load', () => {
-          if (!cancelled) setIsLoaded(true);
+          if (!cancelled) {
+            setIsLoaded(true);
+            setLoadFailed(false);
+          }
         });
         instance.on?.('error', () => {
           if (!cancelled) setLoadFailed(true);
@@ -504,31 +519,47 @@ export function PanoramaViewport({
     [hoveredLotId, lotes]
   );
 
-  const isCompared = comparedLotIds.includes(selectedLot.id);
-  const compareFull = !isCompared && comparedLotIds.length >= 3;
-
   const tracedCount = Object.keys(polygons).length;
 
   return (
     <div
       ref={viewportRef}
       onClick={handleCanvasClickForTrace}
-      className={`relative w-full ${
-        isMobileSheetOpen ? 'h-[calc(46%+14px)] landscape:h-full' : 'h-full'
-      } min-[860px]:h-full min-[860px]:flex-1 shrink-0 overflow-hidden bg-[#0f3d26] select-none transition-[height] duration-300 ${
+      className={`relative w-full h-[100dvh] flex-1 shrink-0 overflow-hidden bg-[#0f3d26] select-none ${
         isDrawingMode ? 'cursor-crosshair' : 'cursor-grab'
       }`}
-      aria-label="Vista aérea interactiva 360 grados de Residencial El Bosque Etapa 3"
+      aria-label="Vista 360 grados inmersiva de Residencial El Bosque Etapa 3"
     >
+      {/* Loading indicator with robust fallback */}
       {!isLoaded && !loadFailed && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white pointer-events-none z-10 bg-[#0f3d26]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white pointer-events-none z-20 bg-[#0f3d26]">
           <div className="w-10 h-10 rounded-full border-2 border-[#84cc16]/30 border-t-[#facc15] animate-spin" />
-          <p className="text-sm font-bold tracking-wide text-[#facc15]">
-            Cargando vista aérea 360°...
+          <p className="text-sm font-extrabold tracking-wide text-[#facc15]">
+            Cargando experiencia 360°...
           </p>
           <p className="text-xs text-white/75 max-w-xs text-center px-4">
-            Preparando fotografía panorámica esférica de Residencial El Bosque
+            Residencial El Bosque · Etapa 3
           </p>
+        </div>
+      )}
+
+      {/* Fallback view if CDN is blocked or slow */}
+      {loadFailed && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 bg-[#0f3d26] text-white z-20 text-center">
+          <Compass className="w-12 h-12 text-[#facc15] animate-pulse" />
+          <div className="max-w-md space-y-2">
+            <h3 className="text-lg font-bold">Carga de red lenta</h3>
+            <p className="text-xs text-white/80">
+              Puedes explorar el plano oficial y la lista completa de lotes directamente.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenMobileSheet}
+            className="px-5 py-2.5 rounded-xl bg-[#facc15] text-[#0f3d26] text-xs font-extrabold cursor-pointer"
+          >
+            Abrir Plano y Ficha de Lotes
+          </button>
         </div>
       )}
 
@@ -536,7 +567,7 @@ export function PanoramaViewport({
       <div ref={viewerContainerRef} className="w-full h-full" />
 
       {/* Live Projected SVG Layer for Interactive 360° Lot Polygons */}
-      {isLoaded && !loadFailed && (
+      {(!loadFailed) && (
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none z-15"
           viewBox={`0 0 ${Math.max(1, cameraState.width)} ${Math.max(1, cameraState.height)}`}
@@ -652,11 +683,11 @@ export function PanoramaViewport({
         </svg>
       )}
 
-      {/* Instant Hover Tooltip (Burbuja rápida al pasar el mouse sobre un lote en 360°) */}
+      {/* Instant Hover Tooltip */}
       {hoveredLot && !isDrawingMode && (
         <div
           data-toolbar="true"
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-35 pointer-events-none bg-[#0f3d26]/90 backdrop-blur-[10px] text-white px-3.5 py-1.5 rounded-xl border border-[#facc15] shadow-2xl flex items-center gap-2 text-xs font-mono-num font-bold animate-fadeIn"
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-35 pointer-events-none bg-[#0f3d26]/90 backdrop-blur-[10px] text-white px-3.5 py-1.5 rounded-xl border border-[#facc15] shadow-2xl flex items-center gap-2 text-xs font-mono-num font-bold"
         >
           <span className="text-[#facc15]">Lote {hoveredLot.num}</span>
           <span>·</span>
@@ -823,11 +854,11 @@ export function PanoramaViewport({
         </div>
       )}
 
-      {/* Floating Interactive Card (Burbuja Inmobiliaria al seleccionar un lote) */}
-      {!isMobileSheetOpen && !isDrawingMode && selectedLot && (
+      {/* Floating Interactive Card ("Burbuja Inmobiliaria" al seleccionar un lote) */}
+      {!isDrawingMode && selectedLot && (
         <div
           data-toolbar="true"
-          className="absolute bottom-16 right-3 min-[860px]:bottom-5 min-[860px]:right-5 z-30 w-[calc(100%-24px)] max-w-xs bg-white/95 backdrop-blur-[12px] text-[#0f3d26] rounded-2xl border-2 border-[#facc15] shadow-2xl p-3.5 space-y-2.5 animate-slideUp"
+          className="absolute bottom-16 right-3 min-[860px]:bottom-5 min-[860px]:right-5 z-30 w-[calc(100%-24px)] max-w-xs bg-white/95 backdrop-blur-[12px] text-[#0f3d26] rounded-2xl border-2 border-[#facc15] shadow-2xl p-3.5 space-y-2.5"
         >
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -847,9 +878,10 @@ export function PanoramaViewport({
             <button
               type="button"
               onClick={onOpenMobileSheet}
-              className="px-2.5 py-1 rounded-lg bg-[#0f3d26] text-[#facc15] hover:bg-[#84cc16] hover:text-[#0f3d26] text-[11px] font-extrabold transition-colors cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0f3d26] text-[#facc15] hover:bg-[#84cc16] hover:text-[#0f3d26] text-[11px] font-extrabold transition-colors cursor-pointer whitespace-nowrap shadow"
             >
-              Ver Ficha +
+              <Layers className="w-3 h-3 shrink-0" />
+              <span>Plano y Lista</span>
             </button>
           </div>
 
@@ -1022,15 +1054,14 @@ export function PanoramaViewport({
               )}
             </button>
 
-            {!isMobileSheetOpen && (
-              <button
-                type="button"
-                onClick={onOpenMobileSheet}
-                className="min-[860px]:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-[#0f3d26] bg-[#facc15] text-[#0f3d26] text-[11px] font-extrabold shadow-xl cursor-pointer whitespace-nowrap"
-              >
-                <span>Ver Ficha y Lotes</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onOpenMobileSheet}
+              className="inline-flex items-center gap-1.5 h-8 min-[860px]:h-11 px-3 min-[860px]:px-4 rounded-xl border border-[#0f3d26] bg-[#facc15] hover:bg-[#84cc16] text-[#0f3d26] text-[11px] min-[860px]:text-xs font-extrabold shadow-xl cursor-pointer whitespace-nowrap"
+            >
+              <Layers className="w-3.5 h-3.5 shrink-0" />
+              <span>Ver Plano y Lista</span>
+            </button>
           </div>
         </div>
       </div>

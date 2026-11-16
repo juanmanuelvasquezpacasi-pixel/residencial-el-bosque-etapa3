@@ -667,7 +667,7 @@ export default function App() {
       </header>
 
       {/* Native-Style Split: 46% Top Aerial + 54% Rounded Bottom Sheet on mobile (<860px), Horizontal on desktop */}
-      <main className="flex-1 flex flex-col min-[860px]:flex-row overflow-hidden relative bg-[#0f3d26]">
+      <main className="flex-1 flex overflow-hidden relative bg-[#0f3d26]">
         <PanoramaViewport
           lotes={displayLotes}
           selectedLot={selectedLot}
@@ -686,33 +686,46 @@ export default function App() {
           onOpenMobileSheet={() => setIsMobileSheetOpen(true)}
         />
 
-        <LotPlanSidebar
-          lotes={displayLotes}
-          filteredLotes={filteredLotes}
-          selectedLot={selectedLot}
-          sectorFilter={sectorFilter}
-          asesor={asesor}
-          comparedLotIds={comparedLotIds}
-          isAdminMode={isAdminMode}
-          estadosCopied={estadosCopied}
-          isSyncingSheet={isSyncingSheet}
-          isMobileSheetOpen={isMobileSheetOpen}
-          onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
-          onRefreshSheet={() => void syncFromGoogleSheet()}
-          onSectorChange={handleSectorChange}
-          onSelectLot={(id) => handleSelectLot(id, true)}
-          onToggleCompare={handleToggleCompare}
-          onOpenCompare={() => {
-            setIsTourActive(false);
-            setIsCompareOpen(true);
-          }}
-          onOpenExpandedPlan={() => {
-            setIsTourActive(false);
-            setIsPlanModalOpen(true);
-          }}
-          onAdminStatusChange={handleAdminStatusChange}
-          onCopyEstadosLotes={handleCopyEstadosLotes}
-        />
+        {/* Slide-over Drawer for Lot Details and Masterplan (opens when user taps "Ver Plano y Lista" or a lot) */}
+        {isMobileSheetOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileSheetOpen(false)}
+          />
+        )}
+        <div
+          className={`fixed inset-y-0 right-0 z-45 w-full sm:w-[440px] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col ${
+            isMobileSheetOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <LotPlanSidebar
+            lotes={displayLotes}
+            filteredLotes={filteredLotes}
+            selectedLot={selectedLot}
+            sectorFilter={sectorFilter}
+            asesor={asesor}
+            comparedLotIds={comparedLotIds}
+            isAdminMode={isAdminMode}
+            estadosCopied={estadosCopied}
+            isSyncingSheet={isSyncingSheet}
+            isMobileSheetOpen={true}
+            onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
+            onRefreshSheet={() => void syncFromGoogleSheet()}
+            onSectorChange={handleSectorChange}
+            onSelectLot={(id) => handleSelectLot(id, true)}
+            onToggleCompare={handleToggleCompare}
+            onOpenCompare={() => {
+              setIsTourActive(false);
+              setIsCompareOpen(true);
+            }}
+            onOpenExpandedPlan={() => {
+              setIsTourActive(false);
+              setIsPlanModalOpen(true);
+            }}
+            onAdminStatusChange={handleAdminStatusChange}
+            onCopyEstadosLotes={handleCopyEstadosLotes}
+          />
+        </div>
       </main>
 
       {isAdminMode && coordToast && (
