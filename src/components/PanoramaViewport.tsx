@@ -157,7 +157,7 @@ export function PanoramaViewport({
   const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
   const [editingLotId, setEditingLotId] = useState<string>(selectedLot.id);
   const [draftPoints, setDraftPoints] = useState<SphericalPoint[]>([]);
-  const [copiedSnippet, setCopiedSnippet] = useState<boolean>(false);
+const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
 
   const [cameraState, setCameraState] = useState<{
     pitch: number;
@@ -592,6 +592,7 @@ export function PanoramaViewport({
                   viewerInstanceRef.current?.stopAutoRotate?.();
                   setAutoRotate(false);
                   onSelectLot(lote.id);
+                  setShowFloatingCard(true);
                   onOpenMobileSheet();
                 }}
               >
@@ -845,7 +846,7 @@ export function PanoramaViewport({
       )}
 
       {/* Floating Interactive Card */}
-      {!isMobileSheetOpen && !isDrawingMode && selectedLot && (
+    {showFloatingCard && !isMobileSheetOpen && !isDrawingMode && selectedLot && (
         <div
           data-toolbar="true"
           className="absolute bottom-16 right-3 min-[860px]:bottom-5 min-[860px]:right-5 z-30 w-[calc(100%-24px)] max-w-xs bg-white/95 backdrop-blur-[12px] text-[#0f3d26] rounded-2xl border-2 border-[#facc15] shadow-2xl p-3.5 space-y-2.5 animate-slideUp"
