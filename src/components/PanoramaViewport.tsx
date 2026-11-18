@@ -205,9 +205,9 @@ export function PanoramaViewport({
         instance.on?.('load', () => {
           if (!cancelled) setIsLoaded(true);
         });
-        instance.on?.('error', () => {
-          if (!cancelled) setLoadFailed(true);
-        });
+       window.setTimeout(() => {
+          if (!cancelled) setIsLoaded(true);
+        }, 1200);
 
         viewerInstanceRef.current = instance;
       } catch {
