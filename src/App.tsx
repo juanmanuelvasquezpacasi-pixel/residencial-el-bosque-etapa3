@@ -77,7 +77,7 @@ export default function App() {
   const initialLotId = useMemo(() => resolveInitialLotIdFromUrl(), []);
   const isAdminMode = useMemo(() => isAdminModeFromUrl(), []);
 
-  const [showWelcome, setShowWelcome] = useState<boolean>(false);
+  const [showWelcome, setShowWelcome] = useState<boolean>(true);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [lotes, setLotes] = useState<Lote[]>(() =>
     computeLotsFromDimensions(null, null, initialOverrides)

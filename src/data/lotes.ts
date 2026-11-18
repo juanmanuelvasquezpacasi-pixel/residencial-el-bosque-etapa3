@@ -31,7 +31,7 @@ export const PANORAMA_360_URL = '/vista360.jpg';
 export const PLAN_MAP_URL = 'https://files.catbox.moe/hwg12k.jpg';
 export const PRESENTATION_AUDIO_URL = 'https://files.catbox.moe/1dxlm2.mp3';
 // Reemplaza esta cadena vacía con la URL directa de tu logo cuando lo tengas alojado
-export const TAUREN_LOGO_URL = 'https://files.catbox.moe/rz4mpm.png';
+export const TAUREN_LOGO_URL = 'https://files.catbox.moe/0qfm6u.png';
 export const GOOGLE_MAPS_URL =
   'https://www.google.com/maps/search/?api=1&query=Av.+Sesquicentenario,+Andahuaylas,+Apurimac,+Peru';
 export const AERIAL_HIT_RADIUS_PX = 25;

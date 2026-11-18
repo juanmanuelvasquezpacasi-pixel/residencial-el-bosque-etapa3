@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Compass, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { TAUREN_LOGO_URL } from '../data/lotes';
 
 interface WelcomeModalProps {
@@ -21,81 +21,63 @@ export function WelcomeModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f3d26]/92 backdrop-blur-[12px] p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#092818]/92 backdrop-blur-[14px] p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="welcome-title"
     >
-      <div className="w-full max-w-md rounded-2xl border border-[#facc15]/60 bg-[#0f3d26]/85 backdrop-blur-[10px] shadow-2xl p-6 sm:p-8 text-center text-white flex flex-col items-center gap-6">
-        {/* Brand Logo or Architectural Golden/White Emblem */}
-        <div className="flex flex-col items-center gap-3">
+      <div className="relative w-full max-w-md rounded-3xl border-2 border-[#facc15]/80 bg-gradient-to-b from-[#0f3d26] via-[#0d3521] to-[#082215] shadow-[0_24px_64px_rgba(0,0,0,0.65)] p-6 sm:p-8 text-center text-white flex flex-col items-center gap-6 overflow-hidden">
+        {/* Subtle decorative golden top glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-44 rounded-full bg-[#facc15]/20 blur-3xl"
+        />
+
+        {/* Brand Logo & Project Header */}
+        <div className="relative flex flex-col items-center gap-4 w-full">
           {showImageLogo ? (
-            <div className="bg-white/95 px-4 py-2.5 rounded-2xl border border-[#facc15]/80 shadow-lg flex items-center justify-center">
+            <div className="bg-white px-6 py-4 rounded-2xl border-2 border-[#facc15] shadow-[0_10px_28px_rgba(0,0,0,0.35)] flex items-center justify-center">
               <img
                 src={TAUREN_LOGO_URL}
-                alt="Inmobiliaria Tauren SAC - Construimos tu futuro"
+                alt="Inmobiliaria Tauren SAC"
                 referrerPolicy="no-referrer"
                 onError={() => setLogoError(true)}
-                className="max-h-16 sm:max-h-20 w-auto object-contain"
+                className="max-h-20 sm:max-h-24 w-auto object-contain"
               />
             </div>
           ) : (
             <div className="w-20 h-20 rounded-2xl border border-[#facc15]/70 bg-white/[0.06] flex items-center justify-center shadow-lg">
-              <svg
-                viewBox="0 0 64 64"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-12 h-12"
-                aria-hidden="true"
-              >
-                <path
-                  d="M32 8L12 34H24L16 48H48L40 34H52L32 8Z"
-                  stroke="#facc15"
-                  strokeWidth="2.5"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M32 22V56"
-                  stroke="#ffffff"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M22 56H42"
-                  stroke="#84cc16"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <Compass className="w-10 h-10 text-[#facc15]" />
             </div>
           )}
 
-          <div className="space-y-1">
-            <p className="text-xs font-bold tracking-[0.18em] uppercase text-[#facc15]">
-              Inmobiliaria Tauren
-            </p>
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#facc15]/15 border border-[#facc15]/45 text-[11px] font-extrabold tracking-[0.16em] uppercase text-[#facc15]">
+              <Sparkles className="w-3 h-3" />
+              <span>Inmobiliaria Tauren</span>
+            </span>
             <h2
               id="welcome-title"
-              className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight text-white"
+              className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight text-white pt-1"
             >
               Residencial El Bosque
             </h2>
-            <p className="text-xs sm:text-sm text-white/80 font-medium">
+            <p className="text-xs sm:text-sm text-[#84cc16] font-extrabold tracking-wide uppercase">
               Etapa 3 · Andahuaylas · 46 Lotes Exclusivos
             </p>
           </div>
         </div>
 
-        <p className="text-xs sm:text-sm text-white/85 leading-relaxed max-w-xs">
-          Explora la vista aérea interactiva, revisa las medidas exactas y reserva tu lote ideal en tiempo real.
+        <p className="relative text-xs sm:text-sm text-white/85 leading-relaxed max-w-xs font-medium">
+          Recorre la vista aérea panorámica 360°, consulta áreas exactas en tiempo real y reserva tu lote ideal.
         </p>
 
         {/* Two clear entry buttons */}
-        <div className="w-full flex flex-col gap-3">
+        <div className="relative w-full flex flex-col gap-3">
           <button
             type="button"
             onClick={onEnterWithAudio}
-            className="flex items-center justify-center gap-2.5 w-full h-12 px-5 rounded-xl bg-[#facc15] hover:bg-[#84cc16] text-[#0f3d26] text-sm font-extrabold transition-colors shadow-lg cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="flex items-center justify-center gap-2.5 w-full h-12 px-5 rounded-xl bg-[#facc15] hover:bg-[#84cc16] text-[#0f3d26] text-sm font-extrabold transition-all shadow-lg hover:scale-[1.01] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <Volume2 className="w-5 h-5 shrink-0" />
             <span>Ingresar con Audio</span>
