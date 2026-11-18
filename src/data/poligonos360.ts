@@ -3,15 +3,14 @@ export interface SphericalPoint {
   yaw: number;
 }
 
-// Polígonos 360° alineados y rectos para los 46 lotes de Residencial El Bosque - Etapa 3
 export const POLIGONOS_360_LOTES: Record<string, SphericalPoint[]> = {
-  // BLOQUE ESTE (01 al 06 — Columna derecha, de abajo hacia arriba)
-  '01': [{ pitch: -20.5, yaw: 14.0 }, { pitch: -20.5, yaw: 17.5 }, { pitch: -23.0, yaw: 17.5 }, { pitch: -23.0, yaw: 14.0 }],
-  '02': [{ pitch: -23.0, yaw: 14.0 }, { pitch: -23.0, yaw: 17.5 }, { pitch: -25.5, yaw: 17.5 }, { pitch: -25.5, yaw: 14.0 }],
-  '03': [{ pitch: -25.5, yaw: 14.0 }, { pitch: -25.5, yaw: 17.5 }, { pitch: -28.0, yaw: 17.5 }, { pitch: -28.0, yaw: 14.0 }],
-  '04': [{ pitch: -28.0, yaw: 14.0 }, { pitch: -28.0, yaw: 17.5 }, { pitch: -30.5, yaw: 17.5 }, { pitch: -30.5, yaw: 14.0 }],
-  '05': [{ pitch: -30.5, yaw: 14.0 }, { pitch: -30.5, yaw: 17.5 }, { pitch: -33.0, yaw: 17.5 }, { pitch: -33.0, yaw: 14.0 }],
-  '06': [{ pitch: -33.0, yaw: 14.0 }, { pitch: -33.0, yaw: 17.5 }, { pitch: -35.5, yaw: 17.5 }, { pitch: -35.5, yaw: 14.0 }],
+  '01': [{ pitch: -64.25, yaw: 92.86 }, { pitch: -58.16, yaw: 89.35 }, { pitch: -58.32, yaw: 91.92 }, { pitch: -64.22, yaw: 98.2 }],
+  '02': [{ pitch: -58.07, yaw: 85.79 }, { pitch: -58.23, yaw: 89.46 }, { pitch: -64.29, yaw: 92.78 }, { pitch: -64.28, yaw: 87.34 }],
+  '03': [{ pitch: -57.84, yaw: 81.65 }, { pitch: -58.04, yaw: 85.7 }, { pitch: -64.24, yaw: 87.33 }, { pitch: -63.94, yaw: 82.05 }],
+  '04': [{ pitch: -57.87, yaw: 81.58 }, { pitch: -63.98, yaw: 81.95 }, { pitch: -63.43, yaw: 76.45 }, { pitch: -57.24, yaw: 77.46 }],
+  '05': [{ pitch: -62.74, yaw: 71.05 }, { pitch: -56.53, yaw: 73.32 }, { pitch: -57.31, yaw: 77.46 }, { pitch: -63.43, yaw: 76.45 }],
+  '06': [{ pitch: -55.52, yaw: 68.86 }, { pitch: -56.53, yaw: 73.32 }, { pitch: -62.79, yaw: 71.13 }, { pitch: -61.73, yaw: 64.64 }],
+};
 
   // BLOQUE NORTE (07 al 16 — Fila superior, de derecha a izquierda)
   '07': [{ pitch: -18.0, yaw: 2.0 }, { pitch: -18.0, yaw: 5.5 }, { pitch: -21.0, yaw: 5.5 }, { pitch: -21.0, yaw: 2.0 }],
