@@ -183,13 +183,13 @@ export function LotPlanSidebar({
     <aside
       className={`${
         isMobileSheetOpen
-          ? 'flex fixed inset-x-0 bottom-0 h-[56dvh] landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:w-[360px] landscape:h-full min-[860px]:static min-[860px]:h-full min-[860px]:w-[420px]'
-          : 'hidden min-[860px]:flex min-[860px]:h-full min-[860px]:w-[420px]'
-      } bg-white rounded-t-[20px] landscape:rounded-none min-[860px]:rounded-none shadow-[0_-10px_28px_rgba(15,61,38,0.32)] min-[860px]:shadow-none border-t border-[#facc15]/60 min-[860px]:border-t-0 min-[860px]:border-l min-[860px]:border-[#0f3d26]/20 flex-col z-35 overflow-hidden shrink-0`}
+          ? 'flex fixed inset-x-0 bottom-0 h-[56dvh] landscape:static landscape:h-full landscape:w-[330px] min-[860px]:static min-[860px]:h-full min-[860px]:w-[420px]'
+          : 'hidden landscape:flex landscape:static landscape:h-full landscape:w-[330px] min-[860px]:flex min-[860px]:h-full min-[860px]:w-[420px]'
+      } bg-white rounded-t-[20px] landscape:rounded-none min-[860px]:rounded-none shadow-[0_-10px_28px_rgba(15,61,38,0.32)] landscape:shadow-none min-[860px]:shadow-none border-t border-[#facc15]/60 landscape:border-t-0 landscape:border-l landscape:border-[#0f3d26]/20 min-[860px]:border-t-0 min-[860px]:border-l min-[860px]:border-[#0f3d26]/20 flex-col z-35 overflow-hidden shrink-0 pr-[env(safe-area-inset-right)]`}
       aria-label="Tarjeta de ficha de lotes y plano oficial"
     >
       {/* Mobile Bottom Sheet Handle + Top Tab Switcher (Ficha y Lotes | Plano Oficial) + Close to full map */}
-      <div className="min-[860px]:hidden shrink-0 px-3 pt-1.5 pb-1.5 bg-white border-b border-[#0f3d26]/12">
+      <div className="landscape:hidden min-[860px]:hidden shrink-0 px-3 pt-1.5 pb-1.5 bg-white border-b border-[#0f3d26]/12">
         <div className="flex items-center gap-1.5">
           <div
             role="tablist"
@@ -240,7 +240,7 @@ export function LotPlanSidebar({
       {/* Scrollable Body */}
       <div className="flex-1 overflow-y-auto overscroll-contain flex flex-col">
         {/* Desktop Availability Bar */}
-        <div className="hidden min-[860px]:grid px-4 py-3 bg-[#0f3d26] text-white border-b border-[#facc15]/40 grid-cols-3 gap-2 shrink-0">
+        <div className="hidden landscape:grid min-[860px]:grid px-3 min-[860px]:px-4 py-2 min-[860px]:py-3 bg-[#0f3d26] text-white border-b border-[#facc15]/40 grid-cols-3 gap-2 shrink-0">
           <div className="relative px-2.5 py-2 rounded-lg bg-white/[0.07] border border-[#84cc16]/40 text-center">
             <button
               type="button"

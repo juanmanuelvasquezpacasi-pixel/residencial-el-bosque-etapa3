@@ -11,12 +11,16 @@
   body,
   #root {
     height: 100dvh;
+    min-height: -webkit-fill-available;
     width: 100%;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
     font-family: var(--font-body);
-    background-color: #ffffff;
+    background-color: #0f3d26;
     color: #0f3d26;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
   }
 
   h1, h2, h3, .font-display {

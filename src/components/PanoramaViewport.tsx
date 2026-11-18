@@ -802,7 +802,7 @@ export function PanoramaViewport({
       {/* Bottom-left glassmorphic 360 controls */}
       <div
         data-toolbar="true"
-        className="absolute bottom-[22px] left-2.5 min-[860px]:bottom-5 min-[860px]:left-5 flex items-end gap-2 z-25 max-w-[calc(100%-20px)]"
+        className="absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-[max(10px,env(safe-area-inset-left))] min-[860px]:bottom-5 min-[860px]:left-5 flex items-end gap-2 z-25 max-w-[calc(100%-20px)]"
       >
         <div className="flex flex-col gap-1 min-[860px]:gap-2 shrink-0">
           <button
@@ -903,7 +903,7 @@ export function PanoramaViewport({
               <button
                 type="button"
                 onClick={onOpenMobileSheet}
-                className="min-[860px]:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-[#0f3d26] bg-[#facc15] text-[#0f3d26] text-[11px] font-extrabold shadow-xl cursor-pointer whitespace-nowrap"
+                className="landscape:hidden min-[860px]:hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-[#0f3d26] bg-[#facc15] text-[#0f3d26] text-[11px] font-extrabold shadow-xl cursor-pointer whitespace-nowrap"
               >
                 <span>Ver Ficha y Lotes</span>
               </button>

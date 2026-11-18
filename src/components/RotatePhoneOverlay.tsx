@@ -8,11 +8,17 @@ interface RotatePhoneOverlayProps {
 export function RotatePhoneOverlay({ enabled }: RotatePhoneOverlayProps) {
   const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    setIsIos(/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
     const checkOrientation = () => {
-      const isSmallDevice = Math.min(window.innerWidth, window.innerHeight) < 650;
-      const isPortrait = window.innerHeight > window.innerWidth;
+      const w = window.visualViewport?.width ?? window.innerWidth;
+      const h = window.visualViewport?.height ?? window.innerHeight;
+      const isSmallDevice = Math.min(w, h) < 650;
+      const isPortrait = h > w;
       setIsPortraitMobile(isSmallDevice && isPortrait);
       if (!isPortrait) {
         setDismissed(false);
@@ -22,9 +28,11 @@ export function RotatePhoneOverlay({ enabled }: RotatePhoneOverlayProps) {
     checkOrientation();
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
+    window.visualViewport?.addEventListener('resize', checkOrientation);
     return () => {
       window.removeEventListener('resize', checkOrientation);
       window.removeEventListener('orientationchange', checkOrientation);
+      window.visualViewport?.removeEventListener('resize', checkOrientation);
     };
   }, []);
 
@@ -48,8 +56,10 @@ export function RotatePhoneOverlay({ enabled }: RotatePhoneOverlayProps) {
           <h3 className="text-lg font-extrabold font-display text-white">
             Gira tu celular en horizontal
           </h3>
-          <p className="text-xs text-white/80 leading-relaxed">
-            Para explorar toda la vista aérea de Residencial El Bosque en pantalla completa, coloca tu teléfono de forma horizontal.
+          <p className="text-xs text-white/85 leading-relaxed">
+            {isIos
+              ? 'Desactiva el bloqueo de rotación en tu iPhone y gíralo en horizontal para ver el mapa 360° y el plano lateral en pantalla completa.'
+              : 'Para explorar toda la vista aérea de Residencial El Bosque en pantalla completa, coloca tu teléfono de forma horizontal.'}
           </p>
         </div>
         <button

@@ -319,13 +319,20 @@ export default function App() {
 
   const handleToggleFullscreen = async () => {
     try {
-      if (!document.fullscreenElement) {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
-      } else {
+        setIsFullscreen(true);
+      } else if (document.fullscreenElement && document.exitFullscreen) {
         await document.exitFullscreen();
+        setIsFullscreen(false);
+      } else {
+        // Fallback for iPhone Safari: toggle expanded mode & nudge scroll to collapse browser chrome
+        setIsFullscreen((prev) => !prev);
+        window.scrollTo(0, 1);
       }
     } catch {
-      // Ignore if fullscreen is blocked by embedded iframe policy
+      setIsFullscreen((prev) => !prev);
+      window.scrollTo(0, 1);
     }
   };
 
@@ -453,7 +460,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-white text-[#0f3d26]">
-      <header className="h-[48px] min-[860px]:h-[60px] shrink-0 bg-[#0f3d26] text-white px-3 min-[860px]:px-5 flex items-center justify-between gap-2 sm:gap-6 border-b-[3px] border-[#facc15] z-30">
+      <header className="h-[48px] landscape:h-[42px] min-[860px]:h-[60px] shrink-0 bg-[#0f3d26] text-white px-3 landscape:px-4 min-[860px]:px-5 pt-[env(safe-area-inset-top)] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] flex items-center justify-between gap-2 sm:gap-6 border-b-[3px] border-[#facc15] z-30">
         {/* Zone 1: Brand Logo + Inmobiliaria Tauren */}
         <a
           href="#top"
