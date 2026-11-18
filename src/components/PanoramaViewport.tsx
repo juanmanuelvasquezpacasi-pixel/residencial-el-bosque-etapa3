@@ -479,7 +479,7 @@ export function PanoramaViewport({
       ref={viewportRef}
       onClick={handleCanvasClickForTrace}
       className={`relative w-full ${
-        isMobileSheetOpen ? 'h-[calc(46%+14px)] landscape:h-full' : 'h-full'
+        isMobileSheetOpen ? 'h-[45dvh] landscape:h-full' : 'h-full'
       } min-[860px]:h-full min-[860px]:flex-1 shrink-0 overflow-hidden bg-[#0f3d26] select-none transition-[height] duration-300 ${
         isDrawingMode ? 'cursor-crosshair' : 'cursor-grab'
       }`}
@@ -509,6 +509,10 @@ export function PanoramaViewport({
           {projectedLots.map(({ lote, pointsAttr, centerX, centerY }) => {
             const isSelected = selectedLot.id === lote.id;
             const isDimmed = sectorFilter !== 'todos' && lote.sector !== sectorFilter;
+            const isCompactScreen = cameraState.width < 860;
+            // Scale badge smoothly: ultra-compact on mobile or when zoomed out, slightly larger when zoomed in
+            const zoomFactor = Math.min(1.25, Math.max(0.75, 95 / Math.max(42, cameraState.hfov)));
+            const badgeScale = (isCompactScreen ? 0.62 : 0.85) * zoomFactor;
 
             let fill = 'rgba(250, 204, 21, 0.32)';
             let stroke = '#facc15';
@@ -557,33 +561,33 @@ export function PanoramaViewport({
                   strokeWidth={isSelected ? 3.5 : 2}
                   strokeLinejoin="round"
                 />
-                <g transform={`translate(${centerX}, ${centerY})`}>
+                <g transform={`translate(${centerX}, ${centerY}) scale(${badgeScale.toFixed(2)})`}>
                   <rect
-                    x={lote.estado === 'vendido' ? -24 : -13}
-                    y={-10}
-                    width={lote.estado === 'vendido' ? 48 : 26}
-                    height={20}
-                    rx={5}
+                    x={lote.estado === 'vendido' ? -15 : -9.5}
+                    y={-7}
+                    width={lote.estado === 'vendido' ? 30 : 19}
+                    height={14}
+                    rx={4}
                     fill={
                       lote.estado === 'vendido'
                         ? '#dc2626'
                         : lote.estado === 'reservado'
                         ? '#facc15'
-                        : '#0f3d26'
+                        : 'rgba(15, 61, 38, 0.88)'
                     }
                     stroke="#ffffff"
-                    strokeWidth={1.2}
+                    strokeWidth={0.9}
                   />
                   <text
                     x={0}
-                    y={4}
+                    y={3.2}
                     textAnchor="middle"
                     fill={lote.estado === 'reservado' ? '#0f3d26' : '#ffffff'}
-                    fontSize="10"
+                    fontSize="9"
                     fontWeight="800"
                     fontFamily="JetBrains Mono, monospace"
                   >
-                    {lote.estado === 'vendido' ? `${lote.num} VEND` : lote.num}
+                    {lote.estado === 'vendido' ? `${lote.num}✕` : lote.num}
                   </text>
                 </g>
               </g>

@@ -280,7 +280,7 @@ export function LotPlanSidebar({
         {/* Official Lotization Plan (always shown on desktop, toggled via "Plano Oficial" on mobile) */}
         <div
           className={`p-3.5 min-[860px]:p-4 bg-[#0f3d26]/[0.04] border-b border-[#0f3d26]/15 shrink-0 ${
-            mobileTab === 'plano' ? 'block' : 'hidden min-[860px]:block'
+            mobileTab === 'plano' ? 'block' : 'hidden landscape:block min-[860px]:block'
           }`}
         >
           <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -335,9 +335,9 @@ export function LotPlanSidebar({
                   style={{
                     left: `${lote.px}%`,
                     top: `${lote.py}%`,
-                    width: 'clamp(13px, 3.6cqw, 16px)',
-                    height: 'clamp(13px, 3.6cqw, 16px)',
-                    fontSize: 'clamp(7.5px, 2cqw, 8.5px)',
+                    width: 'clamp(10px, 3.1cqw, 15px)',
+                    height: 'clamp(10px, 3.1cqw, 15px)',
+                    fontSize: 'clamp(6.5px, 1.8cqw, 8px)',
                   }}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full leading-none font-bold font-mono-num flex items-center justify-center border border-white transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15] ${
                     isDimmed
@@ -386,7 +386,7 @@ export function LotPlanSidebar({
           </div>
 
           {/* Mobile quick jump back to Ficha y Lotes */}
-          <div className="min-[860px]:hidden mt-2.5 flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white border border-[#0f3d26]/15">
+          <div className="landscape:hidden min-[860px]:hidden mt-2.5 flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white border border-[#0f3d26]/15">
             <div className="text-xs">
               <span className="font-extrabold text-[#0f3d26]">Lote {selectedLot.num}</span>
               <span className="text-[#0f3d26]/70 font-mono-num"> · {selectedLot.area}</span>
@@ -404,7 +404,7 @@ export function LotPlanSidebar({
         {/* Ficha y Lotes Panel (Default tab on mobile bottom sheet) */}
         <div
           className={`px-3 py-2 min-[860px]:p-4 flex flex-col gap-2 min-[860px]:gap-3 bg-white flex-1 ${
-            mobileTab === 'ficha' ? 'flex' : 'hidden min-[860px]:flex'
+            mobileTab === 'ficha' ? 'flex' : 'hidden landscape:flex min-[860px]:flex'
           }`}
         >
           {/* Thumb-friendly Horizontal Strip of Numbered Lot Buttons (01 - 46) with smooth auto-centering */}
@@ -461,58 +461,58 @@ export function LotPlanSidebar({
             onTouchEnd={handleCardTouchEnd}
             className="touch-pan-y bg-[#0f3d26]/[0.04] border border-[#0f3d26]/15 rounded-2xl p-2.5 min-[860px]:p-4 flex flex-col gap-2 min-[860px]:gap-2.5 transition-all duration-200 select-none"
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <h2 className="text-base min-[860px]:text-xl font-extrabold text-[#0f3d26] font-display tracking-tight">
-                    Lote {selectedLot.num}
-                  </h2>
-                  <span className="font-mono-num text-sm min-[860px]:text-lg font-extrabold text-[#0f3d26]">
-                    {selectedLot.area}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-lg min-[860px]:text-xl font-extrabold text-[#0f3d26] font-display tracking-tight whitespace-nowrap">
+                  Lote {selectedLot.num}
+                </h2>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {!isGreenZone && (
+                    <button
+                      type="button"
+                      disabled={compareFull}
+                      onClick={() => onToggleCompare(selectedLot.id)}
+                      title={
+                        compareFull
+                          ? 'Máximo 3 lotes en el comparador'
+                          : isCompared
+                          ? 'Quitar del comparador'
+                          : 'Guardar para comparar (máx. 3)'
+                      }
+                      aria-pressed={isCompared}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
+                        isCompared
+                          ? 'bg-[#facc15] text-[#0f3d26] border-[#0f3d26]/30'
+                          : 'bg-white text-[#0f3d26] border-[#0f3d26]/25 hover:bg-[#facc15]/25'
+                      }`}
+                    >
+                      <Star
+                        className={`w-3.5 h-3.5 ${
+                          isCompared ? 'fill-[#0f3d26] text-[#0f3d26]' : 'text-[#0f3d26]'
+                        }`}
+                      />
+                      <span className="hidden sm:inline">{isCompared ? 'En lista' : 'Comparar'}</span>
+                    </button>
+                  )}
+
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10.5px] min-[860px]:text-[11px] font-bold px-2 py-1 rounded-lg tracking-wide whitespace-nowrap shrink-0 ${
+                      isGreenZone ? '' : 'uppercase'
+                    } ${statusInfo.badgeClass}`}
+                  >
+                    <StatusIcon className="w-3 h-3 min-[860px]:w-3.5 min-[860px]:h-3.5 shrink-0" />
+                    <span>{statusInfo.label}</span>
                   </span>
                 </div>
-                <p className="text-[11px] min-[860px]:text-xs text-[#0f3d26]/75 font-medium">
-                  {selectedLot.sector} · Residencial El Bosque
-                </p>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                {!isGreenZone && (
-                  <button
-                    type="button"
-                    disabled={compareFull}
-                    onClick={() => onToggleCompare(selectedLot.id)}
-                    title={
-                      compareFull
-                        ? 'Máximo 3 lotes en el comparador'
-                        : isCompared
-                        ? 'Quitar del comparador'
-                        : 'Guardar para comparar (máx. 3)'
-                    }
-                    aria-pressed={isCompared}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
-                      isCompared
-                        ? 'bg-[#facc15] text-[#0f3d26] border-[#0f3d26]/30'
-                        : 'bg-white text-[#0f3d26] border-[#0f3d26]/25 hover:bg-[#facc15]/25'
-                    }`}
-                  >
-                    <Star
-                      className={`w-3.5 h-3.5 ${
-                        isCompared ? 'fill-[#0f3d26] text-[#0f3d26]' : 'text-[#0f3d26]'
-                      }`}
-                    />
-                    <span className="hidden sm:inline">{isCompared ? 'En lista' : 'Comparar'}</span>
-                  </button>
-                )}
-
-                <span
-                  className={`inline-flex items-center gap-1 text-[10.5px] min-[860px]:text-[11px] font-bold px-2 py-1 rounded-lg tracking-wide shrink-0 ${
-                    isGreenZone ? '' : 'uppercase'
-                  } ${statusInfo.badgeClass}`}
-                >
-                  <StatusIcon className="w-3 h-3 min-[860px]:w-3.5 min-[860px]:h-3.5 shrink-0" />
-                  <span>{statusInfo.label}</span>
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <span className="font-mono-num text-base min-[860px]:text-lg font-extrabold text-[#0f3d26] whitespace-nowrap">
+                  {selectedLot.area}
                 </span>
+                <p className="text-[11px] min-[860px]:text-xs text-[#0f3d26]/75 font-medium whitespace-nowrap">
+                  {selectedLot.sector} · Residencial El Bosque
+                </p>
               </div>
             </div>
 
@@ -648,13 +648,13 @@ export function LotPlanSidebar({
               )}
             </div>
 
-            <p className="min-[860px]:hidden text-[10px] text-[#0f3d26]/55 font-medium text-center leading-none">
+            <p className="landscape:hidden min-[860px]:hidden text-[10px] text-[#0f3d26]/55 font-medium text-center leading-none">
               ← Desliza esta tarjeta para cambiar de lote →
             </p>
           </div>
 
           {/* Desktop Dropdown Selectors (mobile uses top Zone Pills + Horizontal Lot Strip) */}
-          <div className="hidden min-[860px]:grid grid-cols-2 gap-2">
+          <div className="hidden landscape:grid min-[860px]:grid grid-cols-2 gap-2">
             <select
               aria-label="Filtrar por sector"
               value={sectorFilter}
@@ -683,7 +683,7 @@ export function LotPlanSidebar({
           </div>
 
           {/* Mobile Availability Summary inside sheet scroll */}
-          <div className="min-[860px]:hidden grid grid-cols-3 gap-2">
+          <div className="landscape:hidden min-[860px]:hidden grid grid-cols-3 gap-2">
             <div className="relative px-2 py-1.5 rounded-lg bg-[#0f3d26]/[0.05] border border-[#0f3d26]/15 text-center">
               <button
                 type="button"
