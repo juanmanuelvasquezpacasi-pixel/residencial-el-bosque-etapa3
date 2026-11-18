@@ -75,18 +75,13 @@ declare global {
 
 const STORAGE_360_KEY = 'tauren_el_bosque_360_polygons_v1';
 
-// Encuadre panorámico abierto (igual a la segunda imagen)
-const INITIAL_PITCH = -12;
-const INITIAL_YAW = -15;
-const INITIAL_HFOV = 118;
-
 function loadSaved360Polygons(): Record<string, SphericalPoint[]> {
   if (typeof window === 'undefined') return { ...POLIGONOS_360_LOTES };
   try {
     const raw = localStorage.getItem(STORAGE_360_KEY);
     if (!raw) return { ...POLIGONOS_360_LOTES };
     const parsed = JSON.parse(raw) as Record<string, SphericalPoint[]>;
-    return parsed;
+    return { ...POLIGONOS_360_LOTES, ...parsed };
   } catch {
     return { ...POLIGONOS_360_LOTES };
   }
@@ -157,7 +152,7 @@ export function PanoramaViewport({
   const [isDrawingMode, setIsDrawingMode] = useState<boolean>(false);
   const [editingLotId, setEditingLotId] = useState<string>(selectedLot.id);
   const [draftPoints, setDraftPoints] = useState<SphericalPoint[]>([]);
-const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<boolean>(false);
 
   const [cameraState, setCameraState] = useState<{
     pitch: number;
@@ -165,7 +160,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
     hfov: number;
     width: number;
     height: number;
-  }>({ pitch: INITIAL_PITCH, yaw: INITIAL_YAW, hfov: INITIAL_HFOV, width: 1280, height: 720 });
+  }>({ pitch: -24, yaw: 0, hfov: 105, width: 1280, height: 720 });
 
   useEffect(() => {
     setEditingLotId(selectedLot.id);
@@ -177,7 +172,6 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
 
     let cancelled = false;
     let retryTimer: number | null = null;
-    let fallbackTimer: number | null = null;
     let rafId = 0;
 
     const initViewer = () => {
@@ -196,11 +190,11 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
           compass: false,
           showControls: false,
           mouseZoom: true,
-          hfov: INITIAL_HFOV,
+          hfov: 105,
           minHfov: 42,
-          maxHfov: 125,
-          pitch: INITIAL_PITCH,
-          yaw: INITIAL_YAW,
+          maxHfov: 120,
+          pitch: -24,
+          yaw: 0,
           crossOrigin: 'anonymous',
           strings: {
             loadingLabel: 'Cargando vista aérea 360°...',
@@ -211,11 +205,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
         instance.on?.('load', () => {
           if (!cancelled) setIsLoaded(true);
         });
-        instance.on?.('error', () => {
-          if (!cancelled) setLoadFailed(true);
-        });
-
-        fallbackTimer = window.setTimeout(() => {
+       window.setTimeout(() => {
           if (!cancelled) setIsLoaded(true);
         }, 1200);
 
@@ -228,9 +218,9 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
         const inst = viewerInstanceRef.current;
         const el = viewerContainerRef.current;
         if (inst && el) {
-          const pitch = inst.getPitch?.() ?? INITIAL_PITCH;
-          const yaw = inst.getYaw?.() ?? INITIAL_YAW;
-          const hfov = inst.getHfov?.() ?? INITIAL_HFOV;
+          const pitch = inst.getPitch?.() ?? -24;
+          const yaw = inst.getYaw?.() ?? 0;
+          const hfov = inst.getHfov?.() ?? 105;
           const width = el.clientWidth;
           const height = el.clientHeight;
           setCameraState((prev) => {
@@ -256,7 +246,6 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
     return () => {
       cancelled = true;
       if (retryTimer) window.clearTimeout(retryTimer);
-      if (fallbackTimer) window.clearTimeout(fallbackTimer);
       window.cancelAnimationFrame(rafId);
       if (viewerInstanceRef.current?.destroy) {
         try {
@@ -281,7 +270,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
     setAutoRotate(false);
     inst.setPitch?.(avgPitch, 600);
     inst.setYaw?.(avgYaw, 600);
-    const curHfov = inst.getHfov?.() ?? INITIAL_HFOV;
+    const curHfov = inst.getHfov?.() ?? 105;
     if (curHfov > 75) {
       inst.setHfov?.(72, 600);
     }
@@ -293,9 +282,8 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
     if (!inst) return;
 
     if (sectorFocusRequest.sector === 'todos') {
-      inst.setPitch?.(INITIAL_PITCH, 600);
-      inst.setYaw?.(INITIAL_YAW, 600);
-      inst.setHfov?.(INITIAL_HFOV, 600);
+      inst.setPitch?.(-24, 600);
+      inst.setHfov?.(105, 600);
       return;
     }
 
@@ -347,6 +335,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
     }
   };
 
+  // SIN LÍMITE DE 4 ESQUINAS: Permite marcar todas las esquinas que necesite el lote o parque
   const handleCanvasClickForTrace = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isAdminMode || !isDrawingMode || !viewerInstanceRef.current?.mouseEventToCoords) return;
     if ((e.target as HTMLElement).closest('[data-toolbar="true"]')) return;
@@ -379,14 +368,6 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
     const nextPolys = { ...polygons };
     delete nextPolys[lotId];
     persistPolygons(nextPolys);
-  };
-
-  const handleClearAllPolygons = () => {
-    setDraftPoints([]);
-    persistPolygons({});
-    if (lotes.length > 0) {
-      setEditingLotId(lotes[0].id);
-    }
   };
 
   const handleCopyPolygonsSnippet = async () => {
@@ -432,17 +413,17 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
   const zoomStep = (deltaHfov: number) => {
     const inst = viewerInstanceRef.current;
     if (!inst) return;
-    const cur = inst.getHfov?.() ?? INITIAL_HFOV;
-    const next = Math.min(125, Math.max(42, cur + deltaHfov));
+    const cur = inst.getHfov?.() ?? 105;
+    const next = Math.min(120, Math.max(42, cur + deltaHfov));
     inst.setHfov?.(next, 250);
   };
 
   const resetCamera = () => {
     const inst = viewerInstanceRef.current;
     if (!inst) return;
-    inst.setPitch?.(INITIAL_PITCH, 450);
-    inst.setYaw?.(INITIAL_YAW, 450);
-    inst.setHfov?.(INITIAL_HFOV, 450);
+    inst.setPitch?.(-24, 450);
+    inst.setYaw?.(0, 450);
+    inst.setHfov?.(105, 450);
   };
 
   const projectedLots = useMemo(() => {
@@ -554,6 +535,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
             const isSelected = selectedLot.id === lote.id;
             const isDimmed = sectorFilter !== 'todos' && lote.sector !== sectorFilter;
 
+            // TRAZOS Y RELLENO EN AMARILLO CORPORATIVO
             let fill = 'rgba(250, 204, 21, 0.32)';
             let stroke = '#facc15';
 
@@ -592,7 +574,6 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
                   viewerInstanceRef.current?.stopAutoRotate?.();
                   setAutoRotate(false);
                   onSelectLot(lote.id);
-                  setShowFloatingCard(true);
                   onOpenMobileSheet();
                 }}
               >
@@ -771,7 +752,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex items-center gap-1.5">
                   {draftPoints.length > 0 && (
                     <button
                       type="button"
@@ -800,18 +781,6 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-bold cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Borrar Lote</span>
-                    </button>
-                  )}
-                  {(tracedCount > 0 || draftPoints.length > 0) && (
-                    <button
-                      type="button"
-                      onClick={handleClearAllPolygons}
-                      title="Limpiar todos los trazos y empezar desde cero"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-600 text-white text-[11px] font-extrabold border border-red-400/50 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Borrar Todo</span>
                     </button>
                   )}
                 </div>
@@ -819,7 +788,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/15 text-[11px]">
                 <span className="text-white/80">
-                  Marca las esquinas del Lote {editingLotId} y pulsa "Cerrar Polígono".
+                  Haz clic en todas las esquinas del Lote {editingLotId} y luego pulsa "Cerrar Polígono".
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
@@ -846,7 +815,7 @@ const [showFloatingCard, setShowFloatingCard] = useState<boolean>(false);
       )}
 
       {/* Floating Interactive Card */}
-    {showFloatingCard && !isMobileSheetOpen && !isDrawingMode && selectedLot && (
+      {!isMobileSheetOpen && !isDrawingMode && selectedLot && (
         <div
           data-toolbar="true"
           className="absolute bottom-16 right-3 min-[860px]:bottom-5 min-[860px]:right-5 z-30 w-[calc(100%-24px)] max-w-xs bg-white/95 backdrop-blur-[12px] text-[#0f3d26] rounded-2xl border-2 border-[#facc15] shadow-2xl p-3.5 space-y-2.5 animate-slideUp"
