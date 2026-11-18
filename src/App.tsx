@@ -77,7 +77,7 @@ export default function App() {
   const initialLotId = useMemo(() => resolveInitialLotIdFromUrl(), []);
   const isAdminMode = useMemo(() => isAdminModeFromUrl(), []);
 
-  const [showWelcome, setShowWelcome] = useState<boolean>(true);
+  const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [lotes, setLotes] = useState<Lote[]>(() =>
     computeLotsFromDimensions(null, null, initialOverrides)
@@ -686,46 +686,33 @@ export default function App() {
           onOpenMobileSheet={() => setIsMobileSheetOpen(true)}
         />
 
-        {/* Slide-over Drawer for Lot Details and Masterplan (opens when user taps "Ver Plano y Lista" or a lot) */}
-        {isMobileSheetOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsMobileSheetOpen(false)}
-          />
-        )}
-        <div
-          className={`fixed inset-y-0 right-0 z-45 w-full sm:w-[440px] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col ${
-            isMobileSheetOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          <LotPlanSidebar
-            lotes={displayLotes}
-            filteredLotes={filteredLotes}
-            selectedLot={selectedLot}
-            sectorFilter={sectorFilter}
-            asesor={asesor}
-            comparedLotIds={comparedLotIds}
-            isAdminMode={isAdminMode}
-            estadosCopied={estadosCopied}
-            isSyncingSheet={isSyncingSheet}
-            isMobileSheetOpen={true}
-            onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
-            onRefreshSheet={() => void syncFromGoogleSheet()}
-            onSectorChange={handleSectorChange}
-            onSelectLot={(id) => handleSelectLot(id, true)}
-            onToggleCompare={handleToggleCompare}
-            onOpenCompare={() => {
-              setIsTourActive(false);
-              setIsCompareOpen(true);
-            }}
-            onOpenExpandedPlan={() => {
-              setIsTourActive(false);
-              setIsPlanModalOpen(true);
-            }}
-            onAdminStatusChange={handleAdminStatusChange}
-            onCopyEstadosLotes={handleCopyEstadosLotes}
-          />
-        </div>
+        <LotPlanSidebar
+          lotes={displayLotes}
+          filteredLotes={filteredLotes}
+          selectedLot={selectedLot}
+          sectorFilter={sectorFilter}
+          asesor={asesor}
+          comparedLotIds={comparedLotIds}
+          isAdminMode={isAdminMode}
+          estadosCopied={estadosCopied}
+          isSyncingSheet={isSyncingSheet}
+          isMobileSheetOpen={isMobileSheetOpen}
+          onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
+          onRefreshSheet={() => void syncFromGoogleSheet()}
+          onSectorChange={handleSectorChange}
+          onSelectLot={(id) => handleSelectLot(id, false)}
+          onToggleCompare={handleToggleCompare}
+          onOpenCompare={() => {
+            setIsTourActive(false);
+            setIsCompareOpen(true);
+          }}
+          onOpenExpandedPlan={() => {
+            setIsTourActive(false);
+            setIsPlanModalOpen(true);
+          }}
+          onAdminStatusChange={handleAdminStatusChange}
+          onCopyEstadosLotes={handleCopyEstadosLotes}
+        />
       </main>
 
       {isAdminMode && coordToast && (
